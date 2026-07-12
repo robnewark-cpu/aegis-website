@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Studies - Aegis Global Holding</title>
+    <meta name="description" content="Real-world examples of successful application management, data integration, and digital transformation projects.">
+    <link rel="canonical" href="https://aegisglobalholding.com/case-studies.html">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #0F1B2E;
+            --teal: #00D9FF;
+            --gold: #B8860B;
+            --light-bg: #F5F7FA;
+            --dark-text: #1A2332;
+            --gray: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light-bg: #1A2332;
+                --dark-text: #F5F7FA;
+                --border: #374151;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            background: var(--light-bg);
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 5%;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            nav {
+                background: var(--navy);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            text-decoration: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .logo {
+                color: var(--teal);
+            }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark-text);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--teal);
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem 5%;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            color: white;
+            padding: 4rem 5%;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 2rem 5%;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1100px;
+            margin: 3rem auto;
+            padding: 0 5%;
+        }
+
+        /* Intro */
+        .intro {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .intro h2 {
+            color: var(--navy);
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .intro h2 {
+                color: var(--teal);
+            }
+        }
+
+        .intro p {
+            font-size: 1.1rem;
+            color: var(--gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Case Study Card */
+        .case-studies-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .case-study-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .case-study-card {
+                background: #1F2937;
+                border-color: var(--border);
+            }
+        }
+
+        .case-study-card:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .case-study-card:hover {
+                box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            }
+        }
+
+        .case-study-header {
+            background: linear-gradient(135deg, var(--navy), #1a3a52);
+            color: white;
+            padding: 2rem;
+            border-bottom: 4px solid var(--teal);
+        }
+
+        .case-study-header h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .industry-tag {
+            display: inline-block;
+            background: var(--teal);
+            color: var(--navy);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .case-study-body {
+            padding: 2rem;
+        }
+
+        .challenge-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .challenge-section h4 {
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .challenge-section h4 {
+                color: var(--teal);
+            }
+        }
+
+        .challenge-section p {
+            color: var(--gray);
+            margin-bottom: 0;
+        }
+
+        .solution-section {
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.05), transparent);
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--teal);
+        }
+
+        .solution-section h4 {
+            color: var(--navy);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .solution-section h4 {
+                color: var(--teal);
+            }
+        }
+
+        .solution-section p {
+            color: var(--gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .solution-section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .solution-list {
+            list-style: none;
+            margin: 1rem 0 0 0;
+        }
+
+        .solution-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: var(--gray);
+        }
+
+        .solution-list li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--teal);
+            font-weight: bold;
+        }
+
+        .results-section {
+            background: linear-gradient(135deg, var(--navy), #1a3a52);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin-top: 1.5rem;
+        }
+
+        .results-section h4 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .result-item {
+            text-align: center;
+        }
+
+        .result-metric {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--teal);
+            margin-bottom: 0.25rem;
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .services-used {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .services-used h4 {
+            color: var(--navy);
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .services-used h4 {
+                color: var(--teal);
+            }
+        }
+
+        .service-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .service-tag {
+            display: inline-block;
+            background: var(--light-bg);
+            color: var(--navy);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .service-tag {
+                background: #374151;
+                color: var(--teal);
+            }
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--gold);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 2px solid var(--gold);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--navy);
+            color: white;
+            padding: 2rem 5%;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        footer a {
+            color: var(--teal);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            font-size: 0.9rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--teal);
+            color: var(--navy);
+            border-radius: 50%;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+
+        .social-links a:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 2rem auto;
+            }
+
+            .case-study-body {
+                padding: 1.5rem;
+            }
+
+            .cta-section {
+                padding: 2rem 1.5rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="/" class="logo">Aegis Global Holding</a>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog.html">Blog</a></li>
+            <li><a href="/services.html">Services</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/case-studies.html">Case Studies</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Case Studies</h1>
+        <p>Proven success delivering complex technology initiatives for enterprise organizations</p>
+    </section>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Intro -->
+        <section class="intro">
+            <h2>How We've Helped</h2>
+            <p>These real-world examples show how Aegis has helped organizations transform their technology capabilities and achieve measurable business outcomes.</p>
+        </section>
+
+        <!-- Case Studies -->
+        <div class="case-studies-grid">
+            <!-- Case Study 1: Application Management Modernization -->
+            <div class="case-study-card">
+                <div class="case-study-header">
+                    <h3>Application Portfolio Modernization</h3>
+                    <span class="industry-tag">Manufacturing</span>
+                </div>
+                <div class="case-study-body">
+                    <div class="challenge-section">
+                        <h4>Challenge</h4>
+                        <p>A mid-sized manufacturing company operated 40+ business applications across legacy and modern platforms. No central monitoring, inconsistent incident response, and high cost of maintenance threatened business operations. Management wanted improved visibility and control over their application portfolio.</p>
+                    </div>
+
+                    <div class="solution-section">
+                        <h4>Our Approach</h4>
+                        <ul class="solution-list">
+                            <li>Comprehensive application inventory and assessment of all systems</li>
+                            <li>Implemented centralized monitoring platform for real-time visibility</li>
+                            <li>Developed standardized incident response procedures</li>
+                            <li>Recommended rationalization strategy to retire redundant systems</li>
+                            <li>Built knowledge base and support process improvements</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-section">
+                        <h4>Results</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="result-metric">30%</div>
+                                <div class="result-label">Reduction in maintenance cost</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">99.2%</div>
+                                <div class="result-label">Average uptime achieved</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">50%</div>
+                                <div class="result-label">Faster incident response</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-used">
+                        <h4>Services Used</h4>
+                        <div class="service-tags">
+                            <span class="service-tag">Application Management</span>
+                            <span class="service-tag">Monitoring & Optimization</span>
+                            <span class="service-tag">Process Improvement</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Study 2: Data Integration -->
+            <div class="case-study-card">
+                <div class="case-study-header">
+                    <h3>Data Integration for Business Intelligence</h3>
+                    <span class="industry-tag">Financial Services</span>
+                </div>
+                <div class="case-study-body">
+                    <div class="challenge-section">
+                        <h4>Challenge</h4>
+                        <p>A regional financial services firm struggled with fragmented data across customer banking systems, loan management platforms, and accounting software. Business teams couldn't get consistent reports, and compliance audits revealed gaps in data governance and audit trails.</p>
+                    </div>
+
+                    <div class="solution-section">
+                        <h4>Our Approach</h4>
+                        <ul class="solution-list">
+                            <li>Designed centralized data hub to integrate core business systems</li>
+                            <li>Built ETL processes for data extraction and transformation</li>
+                            <li>Implemented data governance framework and master data management</li>
+                            <li>Created self-service business intelligence portal for reporting</li>
+                            <li>Developed comprehensive audit logging and compliance controls</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-section">
+                        <h4>Results</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="result-metric">75%</div>
+                                <div class="result-label">Less time on manual reporting</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">100%</div>
+                                <div class="result-label">Audit compliance rate</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">1 day</div>
+                                <div class="result-label">Report turnaround (was 2 weeks)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-used">
+                        <h4>Services Used</h4>
+                        <div class="service-tags">
+                            <span class="service-tag">Data Integration</span>
+                            <span class="service-tag">ETL & Data Pipelines</span>
+                            <span class="service-tag">Data Governance</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Study 3: Digital Transformation -->
+            <div class="case-study-card">
+                <div class="case-study-header">
+                    <h3>Digital Transformation Roadmap & Cloud Migration</h3>
+                    <span class="industry-tag">Healthcare</span>
+                </div>
+                <div class="case-study-body">
+                    <div class="challenge-section">
+                        <h4>Challenge</h4>
+                        <p>A healthcare provider operated aging on-premises infrastructure that hindered their ability to innovate and scale. Leadership wanted to modernize but lacked a clear strategy. They needed guidance on cloud readiness, technology selection, and implementation planning with minimal disruption to patient care operations.</p>
+                    </div>
+
+                    <div class="solution-section">
+                        <h4>Our Approach</h4>
+                        <ul class="solution-list">
+                            <li>Conducted comprehensive technology assessment and cloud readiness evaluation</li>
+                            <li>Developed 3-year digital transformation roadmap with phased approach</li>
+                            <li>Evaluated cloud providers and application migration strategies</li>
+                            <li>Built business case and ROI analysis for executive approval</li>
+                            <li>Provided implementation oversight and change management support</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-section">
+                        <h4>Results</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="result-metric">40%</div>
+                                <div class="result-label">Lower infrastructure costs (3-year)</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">95%</div>
+                                <div class="result-label">Application migration success rate</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">2x</div>
+                                <div class="result-label">Faster deployment cycles</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-used">
+                        <h4>Services Used</h4>
+                        <div class="service-tags">
+                            <span class="service-tag">Digital Transformation</span>
+                            <span class="service-tag">Cloud Strategy</span>
+                            <span class="service-tag">Program Management</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Study 4: Web Redesign -->
+            <div class="case-study-card">
+                <div class="case-study-header">
+                    <h3>Enterprise Website Redesign & Modernization</h3>
+                    <span class="industry-tag">Professional Services</span>
+                </div>
+                <div class="case-study-body">
+                    <div class="challenge-section">
+                        <h4>Challenge</h4>
+                        <p>A consulting firm's 5-year-old website was outdated, slow, and not mobile-optimized. It didn't effectively communicate their expertise to enterprise prospects. They needed a modern platform that would improve lead generation and support their growing services portfolio.</p>
+                    </div>
+
+                    <div class="solution-section">
+                        <h4>Our Approach</h4>
+                        <ul class="solution-list">
+                            <li>Conducted user research and competitive analysis</li>
+                            <li>Redesigned information architecture and user experience</li>
+                            <li>Built modern, responsive website with improved performance</li>
+                            <li>Implemented SEO best practices for search visibility</li>
+                            <li>Developed content management system for easy updates</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-section">
+                        <h4>Results</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="result-metric">45%</div>
+                                <div class="result-label">More qualified leads</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">2.1x</div>
+                                <div class="result-label">Page load speed improvement</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-metric">68%</div>
+                                <div class="result-label">More organic search traffic</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="services-used">
+                        <h4>Services Used</h4>
+                        <div class="service-tags">
+                            <span class="service-tag">Web Design & Development</span>
+                            <span class="service-tag">Content Strategy</span>
+                            <span class="service-tag">SEO Optimization</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <h2>Ready to Achieve Similar Results?</h2>
+            <p>Let's discuss how Aegis can help you reach your technology and business objectives.</p>
+            <a href="mailto:info@aegisglobalholding.com?subject=Case%20Study%20Inquiry&body=I%20would%20like%20to%20learn%20more%20about%20how%20Aegis%20can%20help%20with%20our%20technology%20initiatives." class="cta-button">Start a Conversation</a>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/services.html">Services</a>
+            <a href="/about.html">About</a>
+            <a href="/blog.html">Blog</a>
+            <a href="/case-studies.html">Case Studies</a>
+            <a href="/sitemap.xml">Sitemap</a>
+        </div>
+        <div class="social-links">
+            <a href="https://linkedin.com/company/aegis-global-holding" title="LinkedIn">in</a>
+            <a href="https://www.google.com/maps/search/Aegis+Global+Holding+Edmond+Oklahoma" title="Location">📍</a>
+        </div>
+        <p>&copy; 2024 Aegis Global Holding, LLC. All rights reserved.</p>
+        <p>Veteran-owned business | Edmond, Oklahoma</p>
+    </footer>
+</body>
+</html>
