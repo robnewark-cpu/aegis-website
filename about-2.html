@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Aegis Global Holding</title>
+    <meta name="description" content="Veteran-owned enterprise technology consulting firm based in Edmond, Oklahoma. Specializing in application management, data integration, and digital transformation.">
+    <link rel="canonical" href="https://aegisglobalholding.com/about.html">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #0F1B2E;
+            --teal: #00D9FF;
+            --gold: #B8860B;
+            --light-bg: #F5F7FA;
+            --dark-text: #1A2332;
+            --gray: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light-bg: #1A2332;
+                --dark-text: #F5F7FA;
+                --border: #374151;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            background: var(--light-bg);
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 5%;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            nav {
+                background: var(--navy);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            text-decoration: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .logo {
+                color: var(--teal);
+            }
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--dark-text);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--teal);
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem 5%;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            color: white;
+            padding: 4rem 5%;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 2rem 5%;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1000px;
+            margin: 3rem auto;
+            padding: 0 5%;
+        }
+
+        /* Section */
+        section {
+            margin-bottom: 3rem;
+        }
+
+        section h2 {
+            color: var(--navy);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            section h2 {
+                color: var(--teal);
+            }
+        }
+
+        section h3 {
+            color: var(--navy);
+            font-size: 1.4rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            section h3 {
+                color: var(--teal);
+            }
+        }
+
+        section p {
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Mission Card */
+        .mission-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--teal);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .mission-card {
+                background: #1F2937;
+                border-color: var(--border);
+            }
+        }
+
+        .mission-card h3 {
+            color: var(--navy);
+            margin-top: 0;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .mission-card h3 {
+                color: var(--teal);
+            }
+        }
+
+        .mission-card p {
+            margin-bottom: 0;
+        }
+
+        /* Values Grid */
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .value-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .value-card {
+                background: #1F2937;
+                border-color: var(--border);
+            }
+        }
+
+        .value-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .value-card h3 {
+            color: var(--navy);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .value-card h3 {
+                color: var(--teal);
+            }
+        }
+
+        .value-card p {
+            color: var(--gray);
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Team Section */
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .team-member {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .team-member {
+                background: #1F2937;
+                border-color: var(--border);
+            }
+        }
+
+        .member-header {
+            background: linear-gradient(135deg, var(--navy), var(--teal));
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .member-header h3 {
+            color: white;
+            margin-top: 0;
+            margin-bottom: 0.25rem;
+        }
+
+        .member-title {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .member-body {
+            padding: 1.5rem;
+        }
+
+        .member-body p {
+            color: var(--gray);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .member-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Why Choose Us Section */
+        .why-choose {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .why-choose {
+                background: #1F2937;
+                border-color: var(--border);
+            }
+        }
+
+        .why-choose h3 {
+            margin-top: 0;
+        }
+
+        .benefits-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            list-style: none;
+        }
+
+        .benefits-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .benefits-list li:before {
+            content: "✓";
+            color: var(--teal);
+            font-weight: bold;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .cta-section h2 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--gold);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 2px solid var(--gold);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--navy);
+            color: white;
+            padding: 2rem 5%;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        footer a {
+            color: var(--teal);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            font-size: 0.9rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--teal);
+            color: var(--navy);
+            border-radius: 50%;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+
+        .social-links a:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 2rem auto;
+            }
+
+            .cta-section {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a href="/" class="logo">Aegis Global Holding</a>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog.html">Blog</a></li>
+            <li><a href="/services.html">Services</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/case-studies.html">Case Studies</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>About Aegis Global Holding</h1>
+        <p>Veteran-owned enterprise technology consulting firm delivering strategic solutions to complex business challenges.</p>
+    </section>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Mission Section -->
+        <section>
+            <h2>Our Story</h2>
+            <p>Aegis Global Holding was founded on the principle that great technology outcomes come from combining deep technical expertise with genuine understanding of business objectives. We bring the discipline, integrity, and results-orientation that define successful enterprises.</p>
+            
+            <p>Based in Edmond, Oklahoma, we serve enterprise clients across multiple industries, helping them navigate complex technology challenges and achieve their strategic goals.</p>
+
+            <div class="mission-card">
+                <h3>Our Mission</h3>
+                <p>To deliver strategic technology solutions that enable our clients to compete more effectively, operate more efficiently, and serve their customers better. We succeed when our clients achieve measurable business outcomes from their technology investments.</p>
+            </div>
+
+            <div class="mission-card">
+                <h3>Our Vision</h3>
+                <p>To be the technology consulting partner of choice for enterprise organizations that demand both strategic insight and execution excellence. We build relationships based on trust, transparency, and demonstrated value.</p>
+            </div>
+        </section>
+
+        <!-- Values Section -->
+        <section>
+            <h2>Our Values</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon">🎯</div>
+                    <h3>Integrity</h3>
+                    <p>We operate with transparency and honesty, keeping commitments and admitting when we don't know something.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon">💪</div>
+                    <h3>Excellence</h3>
+                    <p>We pursue quality in everything we do, from strategy development to implementation and support.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon">🤝</div>
+                    <h3>Partnership</h3>
+                    <p>We treat our clients as partners in their success, invested in their outcomes over the long term.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon">🚀</div>
+                    <h3>Innovation</h3>
+                    <p>We stay current with technology trends while focusing on practical solutions that solve real problems.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon">📈</div>
+                    <h3>Results</h3>
+                    <p>We measure success by business outcomes—does the technology investment deliver measurable value?</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-icon">🎖️</div>
+                    <h3>Veteran Spirit</h3>
+                    <p>We embody the discipline, accountability, and commitment to mission that define military service.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Section -->
+        <section>
+            <h2>Leadership Team</h2>
+            <p>Our team combines decades of enterprise technology experience with proven track records delivering complex initiatives.</p>
+            
+            <div class="team-grid">
+                <div class="team-member">
+                    <div class="member-header">
+                        <div>
+                            <h3>Rob Newark</h3>
+                            <div class="member-title">Founder & Principal Consultant</div>
+                        </div>
+                    </div>
+                    <div class="member-body">
+                        <p>Rob brings 20+ years of experience in enterprise technology consulting, application management, and digital transformation initiatives. Veteran-owned business founder with proven track record delivering strategic technology outcomes for Fortune 500 companies and enterprise organizations.</p>
+                    </div>
+                </div>
+            </div>
+            <p>We are actively building our team. If you're passionate about solving complex technology challenges and interested in joining a veteran-owned firm, we'd like to hear from you.</p>
+        </section>
+
+        <!-- Why Choose Us -->
+        <section>
+            <h2>Why Choose Aegis?</h2>
+            
+            <div class="why-choose">
+                <h3>Strategic Approach</h3>
+                <p>We don't implement technology for its own sake. Every recommendation is grounded in your business strategy and constraints.</p>
+            </div>
+
+            <div class="why-choose">
+                <h3>Proven Expertise</h3>
+                <p>Our team has successfully delivered complex enterprise initiatives across multiple industries and technology domains.</p>
+            </div>
+
+            <div class="why-choose">
+                <h3>Veteran-Owned</h3>
+                <p>Military service instilled discipline, integrity, and commitment to mission that defines our approach to client relationships.</p>
+            </div>
+
+            <div class="why-choose">
+                <h3>Collaborative Partnership</h3>
+                <p>We work closely with your team, building capability and knowledge transfer alongside delivery of solutions.</p>
+            </div>
+
+            <div class="why-choose">
+                <h3>Long-Term Focus</h3>
+                <p>We measure success by your long-term outcomes, not by project hours. We stay engaged until goals are achieved.</p>
+            </div>
+
+            <div class="why-choose">
+                <h3>Independence</h3>
+                <p>As an independent consulting firm, we give you unbiased guidance—no hidden agendas to push specific vendors or platforms.</p>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <h2>Let's Work Together</h2>
+            <p>Ready to tackle your most important technology initiatives?</p>
+            <a href="mailto:info@aegisglobalholding.com?subject=Consulting%20Inquiry&body=I%20would%20like%20to%20discuss%20a%20technology%20initiative%20with%20Aegis%20Global%20Holding." class="cta-button">Get in Touch</a>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/services.html">Services</a>
+            <a href="/about.html">About</a>
+            <a href="/blog.html">Blog</a>
+            <a href="/case-studies.html">Case Studies</a>
+            <a href="/sitemap.xml">Sitemap</a>
+        </div>
+        <div class="social-links">
+            <a href="https://linkedin.com/company/aegis-global-holding" title="LinkedIn">in</a>
+            <a href="https://www.google.com/maps/search/Aegis+Global+Holding+Edmond+Oklahoma" title="Location">📍</a>
+        </div>
+        <p>&copy; 2024 Aegis Global Holding, LLC. All rights reserved.</p>
+        <p>Veteran-owned business | Edmond, Oklahoma</p>
+    </footer>
+</body>
+</html>
