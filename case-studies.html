@@ -107,7 +107,9 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            background:
+              linear-gradient(135deg, rgba(15, 27, 46, 0.93) 0%, rgba(26, 58, 82, 0.93) 100%),
+              url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
             color: white;
             padding: 4rem 5%;
             text-align: center;
@@ -491,6 +493,40 @@
             }
         }
     </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Aegis Global Holdings, LLC",
+    "url": "https://aegisglobalholdings.com",
+    "email": "info@aegisglobalholdings.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Edmond",
+      "addressRegion": "OK",
+      "addressCountry": "US"
+    },
+    "description": "Veteran-owned enterprise technology consulting firm specializing in application management, data integration, and digital transformation."
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What industries has Aegis worked with?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Aegis has supported clients across manufacturing, financial services, healthcare, and professional services with application modernization, data integration, and digital transformation projects." }
+      },
+      {
+        "@type": "Question",
+        "name": "How long does a typical engagement take?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Engagement length depends on scope, ranging from focused advisory projects to multi-month implementation and migration work." }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -730,6 +766,21 @@
             </div>
         </div>
 
+        <!-- FAQ Section -->
+        <section class="process-section">
+            <h2>Frequently Asked Questions</h2>
+            <div style="max-width: 800px; margin: 2rem auto 0;">
+                <details style="margin-bottom: 1.25rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--navy);">What industries has Aegis worked with?</summary>
+                    <p style="margin-top: 0.75rem; color: var(--gray);">Aegis has supported clients across manufacturing, financial services, healthcare, and professional services with application modernization, data integration, and digital transformation projects.</p>
+                </details>
+                <details style="margin-bottom: 1.25rem; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--navy);">How long does a typical engagement take?</summary>
+                    <p style="margin-top: 0.75rem; color: var(--gray);">Engagement length depends on scope, ranging from focused advisory projects to multi-month implementation and migration work.</p>
+                </details>
+            </div>
+        </section>
+
         <!-- CTA Section -->
         <section class="cta-section">
             <h2>Ready to Achieve Similar Results?</h2>
@@ -755,5 +806,14 @@
         <p>&copy; 2026 Aegis Global Holdings, LLC. All rights reserved.</p>
         <p>Veteran-owned business | Edmond, Oklahoma</p>
     </footer>
+
+    <script
+      src="https://site-chatbot-assets.pages.dev/widget.js"
+      data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
+      data-site="aegis"
+      data-name="Aegis Global Holding"
+      data-accent="#0F1B2E"
+      data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
+    ></script>
 </body>
 </html>

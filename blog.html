@@ -107,7 +107,9 @@
 
         /* Hero */
         .hero {
-            background: linear-gradient(135deg, var(--navy) 0%, #1a3a52 100%);
+            background:
+              linear-gradient(135deg, rgba(15, 27, 46, 0.93) 0%, rgba(26, 58, 82, 0.93) 100%),
+              url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
             color: white;
             padding: 4rem 5%;
             text-align: center;
@@ -386,6 +388,22 @@
             transform: scale(1.1);
         }
     </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Aegis Global Holdings, LLC",
+    "url": "https://aegisglobalholdings.com",
+    "email": "info@aegisglobalholdings.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Edmond",
+      "addressRegion": "OK",
+      "addressCountry": "US"
+    },
+    "description": "Veteran-owned enterprise technology consulting firm specializing in application management, data integration, and digital transformation."
+  }
+  </script>
 </head>
 <body>
     <!-- Navigation -->
@@ -812,5 +830,14 @@
         // Load articles when page loads
         document.addEventListener('DOMContentLoaded', loadArticles);
     </script>
+
+    <script
+      src="https://site-chatbot-assets.pages.dev/widget.js"
+      data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
+      data-site="aegis"
+      data-name="Aegis Global Holding"
+      data-accent="#0F1B2E"
+      data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
+    ></script>
 </body>
 </html>
