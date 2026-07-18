@@ -1,0 +1,10 @@
+# Cloudflare Pages / Netlify edge-cache headers
+# Prevents stale HTML from being served from CDN or browser cache.
+
+/ai-visibility-check.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+
+# Short TTL for all HTML pages so endpoint changes roll out quickly.
+/*.html
+  Cache-Control: public, max-age=60, must-revalidate

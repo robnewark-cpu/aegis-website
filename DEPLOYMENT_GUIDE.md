@@ -1,5 +1,69 @@
 # Aegis Global Holding Website Deployment Guide
 
+## aegis-form-worker Setup (AI Visibility Check form)
+
+The form on `ai-visibility-check.html` posts to the Cloudflare Worker at
+`https://aegis-form-worker.robert-bb6.workers.dev`. The worker source now lives
+in `workers/aegis-form-worker/`.
+
+### First-time deploy
+
+```bash
+cd workers/aegis-form-worker
+npm install          # installs wrangler
+
+# Log in to your Cloudflare account
+npx wrangler login
+
+# Store the Resend API key as a secret (never commit this value)
+npx wrangler secret put RESEND_API_KEY
+# → paste your key from https://resend.com/api-keys (starts with "re_")
+
+# Optional: override the sender/recipient addresses at runtime
+# npx wrangler secret put FROM_EMAIL   # e.g. noreply@aegisglobalholdings.com
+# npx wrangler secret put TO_EMAIL     # e.g. info@aegisglobalholdings.com
+
+# Deploy
+npm run deploy
+```
+
+### Resend domain verification (fixes 422 / 502 errors)
+
+Resend rejects mail from unverified sender domains with a 422 response, which
+the worker surfaces to the browser as a 502.
+
+1. Go to https://resend.com/domains
+2. Add `aegisglobalholdings.com` and follow the DNS verification steps
+3. Once verified, email from `noreply@aegisglobalholdings.com` will work
+
+Until the domain is verified you can test with `FROM_EMAIL=onboarding@resend.dev`
+— but Resend only allows that address to deliver to the email registered on
+your Resend account.
+
+### Re-deploy after code changes
+
+```bash
+cd workers/aegis-form-worker
+npm run deploy
+```
+
+### Live log tailing (diagnose errors in real time)
+
+```bash
+cd workers/aegis-form-worker
+npm run tail
+```
+
+### Troubleshooting the 502
+
+| Resend status | Root cause | Fix |
+|---|---|---|
+| 401 | `RESEND_API_KEY` missing or revoked | `wrangler secret put RESEND_API_KEY` |
+| 422 | `FROM_EMAIL` domain not verified | Verify domain at resend.com/domains |
+| 429 | Rate-limited | Reduce test volume or upgrade Resend plan |
+
+---
+
 ## Files Created (Round 2)
 
 ### New Pages

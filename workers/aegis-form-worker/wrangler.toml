@@ -1,0 +1,17 @@
+name = "aegis-form-worker"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# ── Non-secret configuration ──────────────────────────────────────────────────
+# These values are safe to commit. Secrets (RESEND_API_KEY) must be stored
+# via `wrangler secret put`, NOT here.
+[vars]
+FROM_EMAIL = "noreply@aegisglobalholdings.com"
+TO_EMAIL   = "info@aegisglobalholdings.com"
+
+# ── Secrets (do NOT add values here — set them with the commands below) ───────
+# wrangler secret put RESEND_API_KEY
+#   → paste your Resend key (starts with "re_")
+#
+# FROM_EMAIL domain MUST be verified in Resend: https://resend.com/domains
+# Until it is, use FROM_EMAIL = "onboarding@resend.dev" (Resend sandbox only).
