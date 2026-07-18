@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aegis Global Holdings | Enterprise Tech Solutions</title>
   <meta name="description" content="Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation.">
+  <link rel="canonical" href="https://aegisglobalholdings.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aegis Global Holdings">
+  <meta property="og:url" content="https://aegisglobalholdings.com/">
+  <meta property="og:title" content="Aegis Global Holdings | Enterprise Tech Solutions">
+  <meta property="og:description" content="Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation.">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=1200&auto=format&fit=crop">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aegis Global Holdings | Enterprise Tech Solutions">
+  <meta name="twitter:description" content="Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation.">
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=1200&auto=format&fit=crop">
   <style>
     * {
       margin: 0;
@@ -80,7 +91,9 @@
 
     /* Hero */
     .hero {
-      background: linear-gradient(135deg, var(--navy) 0%, #1a2d45 100%);
+      background:
+        linear-gradient(135deg, rgba(15, 27, 46, 0.93) 0%, rgba(26, 45, 69, 0.93) 100%),
+        url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
       color: var(--white);
       padding: 120px 0 80px;
       position: relative;
@@ -173,8 +186,6 @@
     }
 
     .service-icon {
-      font-size: 40px;
-      margin-bottom: 16px;
       height: 50px;
       width: 50px;
       display: flex;
@@ -183,7 +194,12 @@
       background: linear-gradient(135deg, var(--teal), var(--teal-dark));
       border-radius: 8px;
       color: var(--navy);
-      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .service-icon svg {
+      width: 26px;
+      height: 26px;
     }
 
     .service-card h3 {
@@ -246,11 +262,17 @@
     }
 
     .about-box {
-      background: linear-gradient(135deg, var(--navy), #1a2d45);
+      background:
+        linear-gradient(160deg, rgba(15, 27, 46, 0.88), rgba(26, 45, 69, 0.82)),
+        url('https://images.unsplash.com/photo-1573164574572-cb89e39749b4?fm=jpg&q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
       color: var(--white);
       padding: 60px 40px;
       border-radius: 8px;
       text-align: center;
+      min-height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .about-box h3 {
@@ -483,8 +505,6 @@
   </nav>
 
   <main>
-  <main>
-  <section class="hero">
   <section class="hero">
     <div class="container">
       <div class="hero-badge">🇺🇸 Veteran-Owned Business</div>
@@ -501,32 +521,32 @@
       <p class="section-subtitle">End-to-end technology solutions designed for organizations that demand reliability and precision.</p>
       <div class="services-grid">
         <div class="service-card">
-          <div class="service-icon">⚙️</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
           <h3>Application Management</h3>
           <p>Monitor, maintain, and optimize your critical applications. We ensure peak performance, security, and uptime across your entire technology stack.</p>
         </div>
         <div class="service-card">
-          <div class="service-icon">🔗</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/><path d="M8.6 7.4 15.4 10.6M8.6 16.6 15.4 13.4"/></svg></div>
           <h3>Data Integration</h3>
           <p>Seamlessly connect disparate systems and data sources. Our integration expertise bridges legacy and modern platforms for unified visibility.</p>
         </div>
         <div class="service-card">
-          <div class="service-icon">🎨</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
           <h3>Web Design & Development</h3>
           <p>Custom-built web applications and platforms tailored to your business needs. Responsive, secure, and built for scale.</p>
         </div>
         <div class="service-card">
-          <div class="service-icon">💼</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20zM2 12h20"/></svg></div>
           <h3>Strategic Consulting</h3>
           <p>Navigate complex technology decisions with expert guidance. We align your tech roadmap with business objectives.</p>
         </div>
         <div class="service-card">
-          <div class="service-icon">🛡️</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 20 6.5V11C20 16 16.5 19.5 12 21 7.5 19.5 4 16 4 11V6.5L12 3Z"/><path d="M9 12l2 2 4-4"/></svg></div>
           <h3>Security & Compliance</h3>
           <p>Protect your critical assets with enterprise-grade security. We ensure compliance with industry standards and regulations.</p>
         </div>
         <div class="service-card">
-          <div class="service-icon">📊</div>
+          <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V5M4 19H20M8 19V11M12 19V7M16 19V13"/></svg></div>
           <h3>Business Intelligence</h3>
           <p>Transform raw data into actionable insights. Custom dashboards and analytics platforms that drive informed decisions.</p>
         </div>
@@ -619,7 +639,7 @@
         <div class="form-message" id="formMessage"></div>
       </form>
     </div>
-  </main>
+  </section>
   </main>
   <footer>
 
@@ -700,5 +720,14 @@ Received: ${new Date().toLocaleString()}
       form.reset();
     });
   </script>
+
+    <script
+      src="https://site-chatbot-assets.pages.dev/widget.js"
+      data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
+      data-site="aegis"
+      data-name="Aegis Global Holding"
+      data-accent="#0F1B2E"
+      data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
+    ></script>
 </body>
 </html>
