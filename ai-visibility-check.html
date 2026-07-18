@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free AI Visibility Check | Aegis Global Holdings</title>
+<meta name="description" content="See exactly how your business appears across ChatGPT, Google AI Overviews, and Perplexity. Free check, results in 24 hours.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E141B;
+    --panel:#141C24;
+    --panel-2:#1B2530;
+    --steel:#3A4A5C;
+    --steel-light:#5C7288;
+    --fog:#8FA1AF;
+    --paper:#EAE7E0;
+    --signal:#FFB300;
+    --signal-dim:#8A6412;
+    --line:#26313D;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 24px;border-bottom:1px solid var(--line);
+  }
+  .brand{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;letter-spacing:.08em;color:var(--fog);
+    text-transform:uppercase;
+  }
+  .brand b{color:var(--paper);}
+  .badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--signal);
+    border:1px solid var(--signal-dim);
+    padding:5px 10px;border-radius:2px;
+    letter-spacing:.08em;text-transform:uppercase;
+  }
+
+  /* HERO */
+  .hero{
+    position:relative;
+    padding:72px 24px 56px;
+    overflow:hidden;
+    border-bottom:1px solid var(--line);
+  }
+  .scan-field{
+    position:absolute;inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:42px 42px;
+    opacity:.35;
+    mask-image:radial-gradient(circle at 70% 30%, black, transparent 75%);
+  }
+  .sweep{
+    position:absolute;
+    top:-120px;right:-160px;
+    width:520px;height:520px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, transparent 0deg, rgba(255,179,0,.28) 18deg, transparent 60deg);
+    animation:spin 5s linear infinite;
+    filter:blur(1px);
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){ .sweep{animation:none;} }
+
+  .hero-inner{position:relative;z-index:1;max-width:640px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--signal);
+    letter-spacing:.12em;text-transform:uppercase;
+    margin-bottom:18px;display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{
+    content:"";width:7px;height:7px;border-radius:50%;
+    background:var(--signal);box-shadow:0 0 8px var(--signal);
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:clamp(32px,5vw,46px);
+    line-height:1.08;
+    margin:0 0 20px;
+    color:#fff;
+    letter-spacing:-.01em;
+  }
+  h1 .accent{color:var(--signal);}
+  .sub{
+    font-size:17px;color:var(--fog);
+    max-width:520px;margin:0 0 32px;
+  }
+
+  /* FORM PANEL */
+  .console{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:28px;
+    max-width:480px;
+    position:relative;
+    z-index:1;
+    box-shadow:0 0 0 1px rgba(255,179,0,.04), 0 20px 40px rgba(0,0,0,.35);
+  }
+  .console-head{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--steel-light);
+    letter-spacing:.1em;text-transform:uppercase;
+    margin-bottom:18px;
+    display:flex;justify-content:space-between;
+  }
+  form{display:flex;flex-direction:column;gap:14px;}
+  label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--fog);
+    letter-spacing:.06em;text-transform:uppercase;
+    margin-bottom:6px;display:block;
+  }
+  input{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:11px 12px;
+    color:var(--paper);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+  }
+  input:focus{
+    outline:2px solid var(--signal);
+    outline-offset:1px;
+    border-color:var(--signal);
+  }
+  button.cta{
+    margin-top:6px;
+    background:var(--signal);
+    color:#1a1300;
+    border:none;
+    border-radius:3px;
+    padding:14px 16px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button.cta:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,179,0,.25);}
+  button.cta:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .fine{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--steel-light);
+    margin-top:14px;text-align:center;letter-spacing:.03em;
+  }
+  #status{font-size:13px;margin-top:10px;font-family:'IBM Plex Mono',monospace;}
+
+  /* PROCESS */
+  .process{padding:64px 24px;border-bottom:1px solid var(--line);}
+  .process h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:22px;color:#fff;margin:0 0 36px;font-weight:600;
+  }
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  @media (max-width:720px){.steps{grid-template-columns:1fr;}}
+  .step{border-top:1px solid var(--steel);padding-top:14px;}
+  .step-id{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;color:var(--signal);letter-spacing:.08em;
+    margin-bottom:10px;display:block;
+  }
+  .step p{margin:0;color:var(--fog);font-size:14.5px;}
+  .step strong{color:var(--paper);display:block;margin-bottom:4px;font-size:15px;}
+
+  footer{padding:28px 24px;text-align:center;}
+  footer p{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--steel-light);letter-spacing:.05em;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><b>AEGIS</b> GLOBAL HOLDINGS</div>
+  <div class="badge">Veteran-Owned</div>
+</header>
+
+<section class="hero">
+  <div class="scan-field" aria-hidden="true"></div>
+  <div class="sweep" aria-hidden="true"></div>
+  <div class="wrap hero-inner">
+    <div class="eyebrow">Free 24-hour scan</div>
+    <h1>Is your business <span class="accent">on the radar</span> of AI search?</h1>
+    <p class="sub">ChatGPT, Google AI Overviews, and Perplexity are how people find businesses now. If your info is outdated or missing, you're invisible to customers who used to find you on Google.</p>
+
+    <div class="console">
+      <div class="console-head"><span>AI_VISIBILITY_CHECK</span><span>FREE</span></div>
+      <form id="scanForm">
+        <div>
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" required autocomplete="name">
+        </div>
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel" required autocomplete="tel">
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email">
+        </div>
+        <div>
+          <label for="url">Website URL</label>
+          <input id="url" name="url" type="text" required placeholder="yourbusiness.com">
+        </div>
+        <button class="cta" type="submit">Run My Free Scan</button>
+        <div id="status"></div>
+      </form>
+      <div class="fine">Results in 24 hrs · No obligation</div>
+    </div>
+  </div>
+</section>
+
+<section class="process">
+  <div class="wrap">
+    <h2>What happens after you submit</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="step-id">STEP_01</span>
+        <strong>We run the scan</strong>
+        <p>We check how your business appears across ChatGPT, Google AI Overviews, and Perplexity.</p>
+      </div>
+      <div class="step">
+        <span class="step-id">STEP_02</span>
+        <strong>You get the report</strong>
+        <p>A plain-English breakdown of gaps, and how you compare to competitors nearby.</p>
+      </div>
+      <div class="step">
+        <span class="step-id">STEP_03</span>
+        <strong>You decide what's next</strong>
+        <p>If you want help fixing it, we'll show you options. If not, keep the report — no pressure.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2026 AEGIS GLOBAL HOLDINGS, LLC — EDMOND, OK</p>
+</footer>
+
+<script>
+  // Replace FORM_ENDPOINT with your form handler (e.g. a Formspree/Tally endpoint, or your own worker).
+  const FORM_ENDPOINT = "FORM_ENDPOINT_HERE";
+
+  document.getElementById('scanForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const status = document.getElementById('status');
+    const btn = e.target.querySelector('button.cta');
+    const data = {
+      name: document.getElementById('name').value,
+      phone: document.getElementById('phone').value,
+      email: document.getElementById('email').value,
+      url: document.getElementById('url').value
+    };
+
+    if(FORM_ENDPOINT === "FORM_ENDPOINT_HERE"){
+      status.style.color = "#FFB300";
+      status.textContent = "Form endpoint not yet connected — see setup notes.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Submitting...";
+    try{
+      const res = await fetch(FORM_ENDPOINT, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      });
+      if(res.ok){
+        status.style.color = "#8FA1AF";
+        status.textContent = "Received — we'll text/email your results within 24 hours.";
+        e.target.reset();
+      } else {
+        throw new Error("Submit failed");
+      }
+    } catch(err){
+      status.style.color = "#E8722A";
+      status.textContent = "Something went wrong — please call us directly.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Run My Free Scan";
+    }
+  });
+</script>
+
+</body>
+</html>
