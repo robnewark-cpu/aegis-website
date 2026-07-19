@@ -28,9 +28,11 @@
  *   STRIPE_LINK_CITATIONS      — Payment link for "Local Citation Building"
  *   STRIPE_LINK_SCHEMA         — Payment link for "Structured Data Implementation"
  *   STRIPE_BOOKING_LINK        — Fallback CTA when per-service links aren't set
+ *   STRIPE_ANNUAL_LINK         — CTA for the "Discuss annual rates" section
+ *                                 (falls back to STRIPE_BOOKING_LINK if not set)
  *
- * To update prices or service descriptions edit SERVICE_CATALOG below,
- * then run:  npm run deploy
+ * To update prices, discount %, or service descriptions edit the constants
+ * below, then run:  npm run deploy
  */
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -39,6 +41,10 @@ const RESEND_API    = "https://api.resend.com/emails";
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL  = "claude-sonnet-4-6";
 const MAX_SITE_CHARS = 8_000;
+
+// Discount shown in the "Annual Plans" section of the client e-mail.
+// Edit this value and redeploy to change the advertised discount.
+const ANNUAL_DISCOUNT_PCT = "15%";
 
 const ALLOWED_ORIGINS = new Set([
   "https://aegisglobalholdings.com",
@@ -526,8 +532,33 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
 
       ${addOnSection}
 
-      <!-- Guarantee note -->
+      <!-- Annual rates & discounts -->
       <table width="100%" cellpadding="0" cellspacing="0" style="margin:36px 0 0">
+        <tr>
+          <td style="background:#0E141B;border-radius:6px;padding:28px 32px;text-align:center">
+            <p style="font-family:monospace;font-size:11px;font-weight:700;color:#FFB300;
+                       text-transform:uppercase;letter-spacing:.12em;margin:0 0 10px">
+              Annual Plans &amp; Bundle Discounts
+            </p>
+            <p style="font-family:sans-serif;font-size:16px;font-weight:700;color:#ffffff;margin:0 0 8px">
+              Save ${ANNUAL_DISCOUNT_PCT} when you commit annually
+            </p>
+            <p style="font-family:sans-serif;font-size:14px;color:#8FA1AF;margin:0 0 20px;line-height:1.6">
+              Monthly retainers, bundled packages, and multi-service discounts are available.<br>
+              Reply to this e-mail or click below and we'll put together a custom quote.
+            </p>
+            <a href="${escHtml(env.STRIPE_ANNUAL_LINK || env.STRIPE_BOOKING_LINK || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}?subject=${encodeURIComponent("Annual Plan — " + label)}`)}"
+               style="display:inline-block;background:#FFB300;color:#1a1300;
+                      font-family:sans-serif;font-weight:700;font-size:15px;
+                      padding:13px 28px;border-radius:4px;text-decoration:none">
+              Discuss Annual Rates →
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Guarantee note -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 0">
         <tr>
           <td style="background:#f8f8f8;border-left:3px solid #FFB300;padding:16px 20px;border-radius:0 4px 4px 0">
             <p style="font-family:sans-serif;font-size:13px;color:#444;margin:0;line-height:1.6">
@@ -592,6 +623,11 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
     "SERVICES & PRICING",
     "",
     ...serviceLines,
+    "",
+    "──────────────────────────────",
+    `ANNUAL PLANS & BUNDLE DISCOUNTS`,
+    `Save ${ANNUAL_DISCOUNT_PCT} when you commit annually. Monthly retainers and bundled packages available.`,
+    `Reply to this e-mail or visit: ${env.STRIPE_ANNUAL_LINK || env.STRIPE_BOOKING_LINK || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}`}`,
     "",
     "──────────────────────────────",
     "Veteran-owned. No contracts. No fluff.",

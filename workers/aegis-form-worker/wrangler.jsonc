@@ -48,6 +48,11 @@
     "STRIPE_LINK_CITATIONS": "",
 
     // No dedicated Stripe link yet — falls back to STRIPE_BOOKING_LINK above.
-    "STRIPE_LINK_SCHEMA": ""
+    "STRIPE_LINK_SCHEMA": "",
+
+    // CTA for the "Discuss Annual Rates" section.
+    // Point this to a Stripe Payment Link, a Calendly booking page, or leave
+    // empty to fall back to STRIPE_BOOKING_LINK.
+    "STRIPE_ANNUAL_LINK": ""
   }
 }
