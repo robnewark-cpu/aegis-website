@@ -10,7 +10,13 @@ in `workers/aegis-form-worker/`.
 
 ```bash
 cd workers/aegis-form-worker
-npm install          # installs wrangler
+
+# If you previously ran `wrangler init` here, a stale wrangler.jsonc with
+# placeholder values may exist locally and take priority over the repo file.
+# Delete it so the committed wrangler.jsonc (with correct name/date) is used:
+rm -f wrangler.jsonc   # only if YOUR local copy has <WORKER_NAME> placeholders
+
+npm install          # installs wrangler v4
 
 # Log in to your Cloudflare account
 npx wrangler login
