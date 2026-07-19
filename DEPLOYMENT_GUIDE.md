@@ -21,13 +21,16 @@ npm install          # installs wrangler v4
 # Log in to your Cloudflare account
 npx wrangler login
 
-# Store the Resend API key as a secret (never commit this value)
-npx wrangler secret put RESEND_API_KEY
-# → paste your key from https://resend.com/api-keys (starts with "re_")
+# Store secrets (never commit these values)
+npx wrangler secret put RESEND_API_KEY    --name aegis-form-worker
+# → paste your Resend key from https://resend.com/api-keys (starts with "re_")
 
-# Optional: override the sender/recipient addresses at runtime
-# npx wrangler secret put FROM_EMAIL   # e.g. noreply@aegisglobalholdings.com
-# npx wrangler secret put TO_EMAIL     # e.g. info@aegisglobalholdings.com
+npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker
+# → paste your Anthropic key from https://console.anthropic.com (starts with "sk-ant-")
+
+# Optional: override sender/recipient at runtime instead of using wrangler.jsonc vars
+# npx wrangler secret put FROM_EMAIL --name aegis-form-worker
+# npx wrangler secret put TO_EMAIL   --name aegis-form-worker
 
 # Deploy
 npm run deploy
@@ -60,13 +63,33 @@ cd workers/aegis-form-worker
 npm run tail
 ```
 
-### Troubleshooting the 502
+### Worker e-mail flow
 
-| Resend status | Root cause | Fix |
+| Step | Timing | Description |
 |---|---|---|
-| 401 | `RESEND_API_KEY` missing or revoked | `wrangler secret put RESEND_API_KEY` |
-| 422 | `FROM_EMAIL` domain not verified | Verify domain at resend.com/domains |
-| 429 | Rate-limited | Reduce test volume or upgrade Resend plan |
+| Notification e-mail | Synchronous (before HTTP 200) | "New AI Visibility Check — {name}" — immediate alert |
+| Website fetch | Background | `fetch(url)`, strip HTML, truncate to 8,000 chars |
+| Anthropic analysis | Background | `claude-sonnet-4-6` assesses AI-search-readiness, returns JSON |
+| Review e-mail | Background | "REVIEW NEEDED: {url} visibility report" — draft for Robert |
+
+The browser sees a 200 response as soon as the notification e-mail is sent. The AI analysis and review e-mail arrive typically within 15–30 seconds.
+
+### Updating the recommended-services list
+
+Edit the `AEGIS_SERVICES` constant at the top of `src/index.js`, then redeploy:
+```bash
+npm run deploy
+```
+
+### Troubleshooting
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `{"error":"Server misconfiguration"}` (500) | `RESEND_API_KEY` not set | `wrangler secret put RESEND_API_KEY --name aegis-form-worker` |
+| Notification e-mail fails (502) with Resend 401 | `RESEND_API_KEY` invalid/revoked | Regenerate key at resend.com/api-keys |
+| Notification e-mail fails (502) with Resend 422 | `FROM_EMAIL` domain not verified | Verify domain at resend.com/domains |
+| Review e-mail missing AI report — note says "ANTHROPIC_API_KEY not configured" | Secret not set | `wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker` |
+| Review e-mail shows "JSON parse failed" with raw text | Claude returned non-JSON | Raw output still included — lead not lost; check logs with `npm run tail` |
 
 ---
 

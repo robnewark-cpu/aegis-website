@@ -5,9 +5,17 @@
   "compatibility_date": "2024-09-23",
 
   // Non-secret configuration — safe to commit.
-  // Secrets (RESEND_API_KEY) must be set with:  wrangler secret put RESEND_API_KEY
+  // Secrets must be set via the CLI (values are never stored here):
+  //
+  //   wrangler secret put RESEND_API_KEY    --name aegis-form-worker
+  //     → paste your Resend key (re_…) from resend.com/api-keys
+  //
+  //   wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker
+  //     → paste your Anthropic key (sk-ant-…) from console.anthropic.com
+  //
+  // FROM_EMAIL domain must be verified in Resend: resend.com/domains
   "vars": {
     "FROM_EMAIL": "noreply@aegisglobalholdings.com",
-    "TO_EMAIL": "info@aegisglobalholdings.com"
+    "TO_EMAIL":   "info@aegisglobalholdings.com"
   }
 }
