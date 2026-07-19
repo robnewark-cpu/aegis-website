@@ -53,32 +53,32 @@ const ALLOWED_ORIGINS = new Set([
  */
 const SERVICE_CATALOG = {
   "AI Visibility Audit & Strategy": {
-    price:       "$497",
+    price:       "$500",
     tagline:     "Comprehensive AI search audit + 90-day roadmap delivered in 5 business days.",
     stripeEnvKey: "STRIPE_LINK_AI_AUDIT",
   },
   "Content & Schema Rewrite": {
-    price:       "$1,497",
+    price:       "$1,500",
     tagline:     "Full site copy rewrite with schema markup — done-for-you, AI-optimized.",
     stripeEnvKey: "STRIPE_LINK_CONTENT_SCHEMA",
   },
   "Google Business Profile Optimization": {
-    price:       "$297",
+    price:       "$300",
     tagline:     "GBP setup, keyword-rich description, categories, and Q&A optimized for AI.",
     stripeEnvKey: "STRIPE_LINK_GBP",
   },
   "Website Migration & Redesign": {
-    price:       "$2,997",
+    price:       "$3,000",
     tagline:     "Modern, fast, AI-readable website built to surface in AI Overviews and ChatGPT.",
     stripeEnvKey: "STRIPE_LINK_WEBSITE",
   },
   "Local Citation Building": {
-    price:       "$197",
+    price:       "$200",
     tagline:     "Consistent NAP across 50+ AI-indexed directories so every platform agrees.",
     stripeEnvKey: "STRIPE_LINK_CITATIONS",
   },
   "Structured Data Implementation": {
-    price:       "$497",
+    price:       "$500",
     tagline:     "JSON-LD schema markup so AI assistants can read, cite, and surface your business.",
     stripeEnvKey: "STRIPE_LINK_SCHEMA",
   },
