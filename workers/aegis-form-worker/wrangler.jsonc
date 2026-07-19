@@ -21,12 +21,33 @@
     "FROM_EMAIL": "noreply@aegisglobalholdings.com",
     "TO_EMAIL":   "info@aegisglobalholdings.com",
 
-    "STRIPE_BOOKING_LINK":       "",
-    "STRIPE_LINK_AI_AUDIT":      "",
-    "STRIPE_LINK_CONTENT_SCHEMA": "",
-    "STRIPE_LINK_GBP":           "",
-    "STRIPE_LINK_WEBSITE":       "",
-    "STRIPE_LINK_CITATIONS":     "",
-    "STRIPE_LINK_SCHEMA":        ""
+    // Fallback for any service card without its own link — and for
+    // GBP, Citations, Schema which don't have dedicated Stripe links yet.
+    // Mapped to: "Aegis All-in-one Care Plan"
+    "STRIPE_BOOKING_LINK": "https://buy.stripe.com/14A00l5K43MT1B926qffy01",
+
+    // "AI Search & Content Retainer" (created 15:05) — closest match to AI audit/strategy
+    // NOTE: $400 Deposit - AI Visibility Package exists but is currently INACTIVE in Stripe.
+    //       Reactivate it at dashboard.stripe.com/payment-links and paste its URL here to
+    //       replace this link with the more specific one.
+    "STRIPE_LINK_AI_AUDIT": "https://buy.stripe.com/fZu8wRegA0AH93BbH0ffy05",
+
+    // "AI Search & Content Retainer" (created 15:04) — mapped to content + schema rewrite
+    // NOTE: Two links share the same Stripe name. Clarify which is which in Stripe
+    //       if they have different prices, then update accordingly.
+    "STRIPE_LINK_CONTENT_SCHEMA": "https://buy.stripe.com/7sYdRb4G0fvB1B99ySffy03",
+
+    // No dedicated Stripe link yet — falls back to STRIPE_BOOKING_LINK above.
+    // Create a GBP-specific Payment Link in Stripe and paste the URL here.
+    "STRIPE_LINK_GBP": "",
+
+    // "Website Mitigation - Deposit"
+    "STRIPE_LINK_WEBSITE": "https://buy.stripe.com/5kQ9AV8WgdntenV6mGffy02",
+
+    // No dedicated Stripe link yet — falls back to STRIPE_BOOKING_LINK above.
+    "STRIPE_LINK_CITATIONS": "",
+
+    // No dedicated Stripe link yet — falls back to STRIPE_BOOKING_LINK above.
+    "STRIPE_LINK_SCHEMA": ""
   }
 }
