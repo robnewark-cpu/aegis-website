@@ -4,24 +4,36 @@
  * Flow
  * ────
  * 1.  Validate POST + CORS
- * 2.  Send immediate "new lead" notification e-mail via Resend   (synchronous)
- * 3.  Return HTTP 200 to the browser so the user sees success immediately
- * 4.  Background (ctx.waitUntil — does not block the response):
- *       a. Fetch lead's website, strip HTML tags, truncate to MAX_SITE_CHARS
- *       b. Call Anthropic (claude-sonnet-4-6) for AI-search-readiness analysis
- *       c. Parse JSON result; fall back to raw text if parsing fails (lead not lost)
- *       d. Send "REVIEW NEEDED" draft report e-mail to Robert
+ * 2.  Send immediate "new lead" notification e-mail to Robert      (synchronous)
+ * 3.  Return HTTP 200 to the browser
+ * 4.  Background (ctx.waitUntil):
+ *       a. Fetch lead's website, strip HTML, truncate to MAX_SITE_CHARS
+ *       b. Call Anthropic claude-sonnet-4-6 → strict JSON report
+ *       c. Send Robert's internal copy ("SENT TO CLIENT" banner)
+ *       d. Send branded client e-mail with report + pricing + Stripe CTAs
  *
- * Required secrets  (set with: wrangler secret put <NAME> --name aegis-form-worker)
+ * Required secrets  (wrangler secret put <NAME> --name aegis-form-worker)
  *   RESEND_API_KEY    — Resend API key  (re_…)
  *   ANTHROPIC_API_KEY — Anthropic API key  (sk-ant-…)
  *
  * Optional vars in wrangler.jsonc [vars]
- *   FROM_EMAIL  — verified Resend sender (default: noreply@aegisglobalholdings.com)
- *   TO_EMAIL    — recipient inbox        (default: info@aegisglobalholdings.com)
+ *   FROM_EMAIL  — verified Resend sender
+ *   TO_EMAIL    — Robert's inbox
+ *
+ * Optional Stripe payment-link vars (wrangler.jsonc [vars] or secrets)
+ *   STRIPE_LINK_AI_AUDIT       — Payment link for "AI Visibility Audit & Strategy"
+ *   STRIPE_LINK_CONTENT_SCHEMA — Payment link for "Content & Schema Rewrite"
+ *   STRIPE_LINK_GBP            — Payment link for "Google Business Profile Optimization"
+ *   STRIPE_LINK_WEBSITE        — Payment link for "Website Migration & Redesign"
+ *   STRIPE_LINK_CITATIONS      — Payment link for "Local Citation Building"
+ *   STRIPE_LINK_SCHEMA         — Payment link for "Structured Data Implementation"
+ *   STRIPE_BOOKING_LINK        — Fallback CTA when per-service links aren't set
+ *
+ * To update prices or service descriptions edit SERVICE_CATALOG below,
+ * then run:  npm run deploy
  */
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 
 const RESEND_API    = "https://api.resend.com/emails";
 const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
@@ -33,16 +45,44 @@ const ALLOWED_ORIGINS = new Set([
   "https://www.aegisglobalholdings.com",
 ]);
 
-// Edit this list to control which services Claude may recommend.
-// Names must match exactly what you want to appear in the review e-mail.
-const AEGIS_SERVICES = [
-  "AI Visibility Audit & Strategy",
-  "Content & Schema Rewrite",
-  "Google Business Profile Optimization",
-  "Website Migration & Redesign",
-  "Local Citation Building",
-  "Structured Data Implementation",
-];
+/**
+ * Service catalog — edit prices, taglines, and Stripe env-var keys here.
+ * stripeEnvKey maps to an env var you set in wrangler.jsonc [vars] or as a secret.
+ * If the env var is not set the button falls back to STRIPE_BOOKING_LINK,
+ * and if that is also absent it falls back to a mailto: contact link.
+ */
+const SERVICE_CATALOG = {
+  "AI Visibility Audit & Strategy": {
+    price:       "$497",
+    tagline:     "Comprehensive AI search audit + 90-day roadmap delivered in 5 business days.",
+    stripeEnvKey: "STRIPE_LINK_AI_AUDIT",
+  },
+  "Content & Schema Rewrite": {
+    price:       "$1,497",
+    tagline:     "Full site copy rewrite with schema markup — done-for-you, AI-optimized.",
+    stripeEnvKey: "STRIPE_LINK_CONTENT_SCHEMA",
+  },
+  "Google Business Profile Optimization": {
+    price:       "$297",
+    tagline:     "GBP setup, keyword-rich description, categories, and Q&A optimized for AI.",
+    stripeEnvKey: "STRIPE_LINK_GBP",
+  },
+  "Website Migration & Redesign": {
+    price:       "$2,997",
+    tagline:     "Modern, fast, AI-readable website built to surface in AI Overviews and ChatGPT.",
+    stripeEnvKey: "STRIPE_LINK_WEBSITE",
+  },
+  "Local Citation Building": {
+    price:       "$197",
+    tagline:     "Consistent NAP across 50+ AI-indexed directories so every platform agrees.",
+    stripeEnvKey: "STRIPE_LINK_CITATIONS",
+  },
+  "Structured Data Implementation": {
+    price:       "$497",
+    tagline:     "JSON-LD schema markup so AI assistants can read, cite, and surface your business.",
+    stripeEnvKey: "STRIPE_LINK_SCHEMA",
+  },
+};
 
 const SYSTEM_PROMPT = `\
 You are an AI search-visibility analyst for Aegis Global Holdings, a veteran-owned technology services company.
@@ -50,7 +90,7 @@ You are an AI search-visibility analyst for Aegis Global Holdings, a veteran-own
 A potential client submitted their website for a free AI Visibility Check. You will receive text scraped from their site. Assess how well this business would appear if someone queried ChatGPT, Google AI Overviews, or Perplexity about it.
 
 SERVICES YOU MAY RECOMMEND — use exact names, choose only from this list:
-${AEGIS_SERVICES.map(s => `- ${s}`).join("\n")}
+${Object.keys(SERVICE_CATALOG).map(s => `- ${s}`).join("\n")}
 
 ANALYSIS CRITERIA
 - Are key business details present? (location, hours, services offered, pricing range, service area)
@@ -85,17 +125,13 @@ export default {
     }
 
     let data;
-    try {
-      data = await request.json();
-    } catch {
-      return jsonResponse({ error: "Invalid JSON body" }, 400, origin);
-    }
+    try { data = await request.json(); }
+    catch { return jsonResponse({ error: "Invalid JSON body" }, 400, origin); }
 
     const { name, phone, email, url } = data;
     if (!name || !email) {
       return jsonResponse({ error: "name and email are required" }, 400, origin);
     }
-
     if (!env.RESEND_API_KEY) {
       console.error("[aegis-form-worker] RESEND_API_KEY is not set");
       return jsonResponse({ error: "Server misconfiguration" }, 500, origin);
@@ -103,16 +139,16 @@ export default {
 
     const lead = { name, phone, email, url };
 
-    // ── Step 1: immediate notification (synchronous, existing behaviour) ───────
+    // 1. Immediate notification to Robert (synchronous)
     const notifyOk = await sendNotificationEmail(env, lead);
     if (!notifyOk) {
       return jsonResponse({ error: "Email service error" }, 502, origin);
     }
 
-    // ── Step 2: background pipeline — does not block the HTTP response ─────────
+    // 2. Background: fetch site → analyze → send both emails
     ctx.waitUntil(runAiAnalysis(env, lead));
 
-    // ── Step 3: return success so the browser shows the confirmation message ───
+    // 3. Browser sees success immediately
     return jsonResponse({ success: true }, 200, origin);
   },
 };
@@ -120,7 +156,7 @@ export default {
 // ── Background pipeline ───────────────────────────────────────────────────────
 
 async function runAiAnalysis(env, lead) {
-  // a. Fetch website text
+  // a. Fetch website
   let siteText  = null;
   let fetchNote = null;
   try {
@@ -131,29 +167,23 @@ async function runAiAnalysis(env, lead) {
     console.error(`[aegis-form-worker] Site fetch failed for ${lead.url}:`, err.message);
   }
 
-  // b–c. Call Anthropic and parse the JSON response
-  let report       = null; // parsed JSON object
-  let reportRaw    = null; // raw string (fallback)
-  let analysisNote = null; // shown in the e-mail when something went wrong
+  // b. Call Anthropic
+  let report       = null;
+  let reportRaw    = null;
+  let analysisNote = null;
 
   if (!env.ANTHROPIC_API_KEY) {
-    analysisNote = "ANTHROPIC_API_KEY not configured — no AI analysis was performed.";
+    analysisNote = "ANTHROPIC_API_KEY not configured — no AI analysis performed.";
     console.error("[aegis-form-worker] ANTHROPIC_API_KEY is not set");
   } else {
     try {
       reportRaw = await callAnthropic(env, lead, siteText, fetchNote);
-
-      // Strip markdown fences that Claude may add despite the prompt
-      const cleaned = reportRaw
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-
+      const cleaned = reportRaw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
       try {
         report = JSON.parse(cleaned);
       } catch {
-        analysisNote = "JSON parsing failed — raw Claude output included below.";
-        console.error("[aegis-form-worker] JSON parse failed. Raw output:", reportRaw);
+        analysisNote = "JSON parsing failed — raw Claude output included.";
+        console.error("[aegis-form-worker] JSON parse failed:", reportRaw);
       }
     } catch (err) {
       analysisNote = `Anthropic API call failed: ${err.message}`;
@@ -161,8 +191,13 @@ async function runAiAnalysis(env, lead) {
     }
   }
 
-  // d. Send the review e-mail to Robert
-  await sendReviewEmail(env, lead, { report, reportRaw, analysisNote, fetchNote });
+  const analysis = { report, reportRaw, analysisNote, fetchNote };
+
+  // c. Robert's internal copy (now says "SENT TO CLIENT")
+  await sendReviewEmail(env, lead, analysis);
+
+  // d. Branded client e-mail with report + pricing + Stripe links
+  await sendClientEmail(env, lead, analysis);
 }
 
 // ── Fetch & strip website ─────────────────────────────────────────────────────
@@ -208,16 +243,16 @@ function stripHtml(html) {
 async function callAnthropic(env, lead, siteText, fetchNote) {
   const userContent = [
     `Business URL: ${lead.url || "(none provided)"}`,
-    fetchNote          ? `Note: ${fetchNote}` : null,
-    siteText           ? `Website content (${siteText.length} chars):\n\n${siteText}` : null,
+    fetchNote ? `Note: ${fetchNote}` : null,
+    siteText  ? `Website content (${siteText.length} chars):\n\n${siteText}` : null,
   ].filter(Boolean).join("\n\n");
 
   const res = await fetch(ANTHROPIC_API, {
     method: "POST",
     headers: {
-      "x-api-key":          env.ANTHROPIC_API_KEY,
-      "anthropic-version":  "2023-06-01",
-      "content-type":       "application/json",
+      "x-api-key":         env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type":      "application/json",
     },
     body: JSON.stringify({
       model:      CLAUDE_MODEL,
@@ -232,14 +267,12 @@ async function callAnthropic(env, lead, siteText, fetchNote) {
     const body = await res.text().catch(() => "");
     throw new Error(`Anthropic ${res.status}: ${body}`);
   }
-
   const data = await res.json();
   return data.content?.[0]?.text ?? "";
 }
 
-// ── E-mail senders ────────────────────────────────────────────────────────────
+// ── E-mail: immediate notification ───────────────────────────────────────────
 
-/** Step 1 — immediate "new lead received" alert (keeps existing behaviour). */
 async function sendNotificationEmail(env, lead) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to   = env.TO_EMAIL   || "info@aegisglobalholdings.com";
@@ -257,8 +290,8 @@ async function sendNotificationEmail(env, lead) {
         <tr><td><strong>Email</strong></td><td>${escHtml(lead.email)}</td></tr>
         <tr><td><strong>Website</strong></td><td>${escHtml(lead.url || "—")}</td></tr>
       </table>
-      <p style="font-family:sans-serif;font-size:13px;color:#5C7288;margin-top:24px">
-        AI analysis running — full review report will arrive shortly in a second e-mail.
+      <p style="font-family:sans-serif;font-size:13px;color:#5C7288;margin-top:20px">
+        AI report generating — client e-mail will be sent automatically in ~30 seconds.
       </p>`,
     text: [
       "New AI Visibility Check Submission",
@@ -267,28 +300,27 @@ async function sendNotificationEmail(env, lead) {
       `Email:   ${lead.email}`,
       `Website: ${lead.url || "—"}`,
       "",
-      "AI analysis running — review report arriving shortly.",
+      "AI report generating — client e-mail sends automatically.",
     ].join("\n"),
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.error(`[aegis-form-worker] Notification e-mail failed ${res.status}:`, body);
-
     if (res.status === 401) console.error("[aegis-form-worker] 401 — RESEND_API_KEY invalid or revoked");
-    if (res.status === 422) console.error("[aegis-form-worker] 422 — FROM_EMAIL domain not verified in Resend (resend.com/domains)");
+    if (res.status === 422) console.error("[aegis-form-worker] 422 — FROM_EMAIL domain not verified (resend.com/domains)");
     return false;
   }
   return true;
 }
 
-/** Step 4d — draft AI report for Robert to review before sending to the client. */
+// ── E-mail: Robert's internal copy ───────────────────────────────────────────
+
 async function sendReviewEmail(env, lead, { report, reportRaw, analysisNote, fetchNote }) {
   const from  = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to    = env.TO_EMAIL   || "info@aegisglobalholdings.com";
   const label = lead.url || lead.name;
 
-  // Build the report section
   let reportHtml, reportText;
 
   if (report) {
@@ -296,35 +328,26 @@ async function sendReviewEmail(env, lead, { report, reportRaw, analysisNote, fet
       <h3 style="font-family:sans-serif;color:#0E141B;margin-top:0">AI Visibility Report</h3>
       <p style="font-family:sans-serif"><strong>Summary</strong><br>${escHtml(report.summary || "")}</p>
       <p style="font-family:sans-serif"><strong>Gaps identified</strong></p>
-      <ul style="font-family:sans-serif">
-        ${(report.gaps || []).map(g => `<li>${escHtml(g)}</li>`).join("")}
-      </ul>
+      <ul style="font-family:sans-serif">${(report.gaps || []).map(g => `<li>${escHtml(g)}</li>`).join("")}</ul>
       <p style="font-family:sans-serif">
         <strong>Recommended services</strong><br>
         ${(report.recommended_services || []).map(s => `<strong>${escHtml(s)}</strong>`).join(", ")}
       </p>
       <p style="font-family:sans-serif"><strong>Reasoning</strong><br>${escHtml(report.reasoning || "")}</p>`;
-
     reportText = [
       "AI VISIBILITY REPORT",
-      "",
-      `Summary:\n${report.summary || ""}`,
-      "",
+      `Summary: ${report.summary || ""}`,
       `Gaps:\n${(report.gaps || []).map(g => `  • ${g}`).join("\n")}`,
-      "",
-      `Recommended services: ${(report.recommended_services || []).join(", ")}`,
-      "",
-      `Reasoning:\n${report.reasoning || ""}`,
-    ].join("\n");
+      `Recommended: ${(report.recommended_services || []).join(", ")}`,
+      `Reasoning: ${report.reasoning || ""}`,
+    ].join("\n\n");
   } else if (reportRaw) {
-    // Claude responded but JSON parse failed — show raw output so lead is not lost
     reportHtml = `
       <h3 style="font-family:sans-serif;color:#c0392b;margin-top:0">AI Output (JSON parse failed)</h3>
       ${analysisNote ? `<p style="font-family:sans-serif;color:#c0392b">${escHtml(analysisNote)}</p>` : ""}
       <pre style="font-family:monospace;background:#f9f9f9;border:1px solid #ddd;padding:12px;white-space:pre-wrap;font-size:13px">${escHtml(reportRaw)}</pre>`;
     reportText = `${analysisNote || ""}\n\n${reportRaw}`;
   } else {
-    // No AI output at all
     reportHtml = `<p style="font-family:sans-serif;color:#c0392b">${escHtml(analysisNote || "AI analysis could not be completed.")}</p>`;
     reportText = analysisNote || "AI analysis could not be completed.";
   }
@@ -333,54 +356,263 @@ async function sendReviewEmail(env, lead, { report, reportRaw, analysisNote, fet
     ? `<p style="font-family:sans-serif;font-size:13px;color:#856404;background:#fff8e1;padding:10px 12px;border-left:3px solid #FFB300;margin:16px 0">⚠ ${escHtml(fetchNote)}</p>`
     : "";
 
-  const html = `
-    <p style="font-family:sans-serif;font-weight:700;background:#fff3cd;border:1px solid #ffc107;padding:12px 16px;color:#856404;margin-bottom:24px">
-      ⚠ DRAFT — review before sending to client.<br>
-      Reply-all or forward manually once approved.
-    </p>
-
-    <h2 style="font-family:sans-serif;color:#0E141B">Lead Information</h2>
-    <table style="font-family:sans-serif;font-size:15px;border-collapse:collapse" cellpadding="8">
-      <tr><td><strong>Name</strong></td><td>${escHtml(lead.name)}</td></tr>
-      <tr><td><strong>Phone</strong></td><td>${escHtml(lead.phone || "—")}</td></tr>
-      <tr><td><strong>Email</strong></td><td>${escHtml(lead.email)}</td></tr>
-      <tr><td><strong>Website</strong></td><td>${lead.url ? `<a href="${escHtml(normalizeUrl(lead.url))}">${escHtml(lead.url)}</a>` : "—"}</td></tr>
-    </table>
-
-    ${fetchWarningHtml}
-
-    <hr style="border:none;border-top:1px solid #e0e0e0;margin:28px 0">
-
-    ${reportHtml}`;
-
-  const text = [
-    "⚠ DRAFT — review before sending to client.",
-    "Reply-all or forward manually once approved.",
-    "",
-    "LEAD",
-    `Name:    ${lead.name}`,
-    `Phone:   ${lead.phone || "—"}`,
-    `Email:   ${lead.email}`,
-    `Website: ${lead.url || "—"}`,
-    fetchNote ? `\nNote: ${fetchNote}` : "",
-    "",
-    "──────────────────────────────────────────",
-    "",
-    reportText,
-  ].join("\n");
-
   const res = await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     reply_to: lead.email,
-    subject: `REVIEW NEEDED: ${label} visibility report`,
+    subject: `SENT TO CLIENT: ${label} visibility report`,
+    html: `
+      <p style="font-family:sans-serif;font-weight:700;background:#d4edda;border:1px solid #c3e6cb;padding:12px 16px;color:#155724;margin-bottom:24px">
+        ✅ SENT TO CLIENT — this report was automatically e-mailed to ${escHtml(lead.email)}.<br>
+        Follow up within 24 hours.
+      </p>
+      <h2 style="font-family:sans-serif;color:#0E141B">Lead Information</h2>
+      <table style="font-family:sans-serif;font-size:15px;border-collapse:collapse" cellpadding="8">
+        <tr><td><strong>Name</strong></td><td>${escHtml(lead.name)}</td></tr>
+        <tr><td><strong>Phone</strong></td><td>${escHtml(lead.phone || "—")}</td></tr>
+        <tr><td><strong>Email</strong></td><td>${escHtml(lead.email)}</td></tr>
+        <tr><td><strong>Website</strong></td><td>${lead.url ? `<a href="${escHtml(normalizeUrl(lead.url))}">${escHtml(lead.url)}</a>` : "—"}</td></tr>
+      </table>
+      ${fetchWarningHtml}
+      <hr style="border:none;border-top:1px solid #e0e0e0;margin:28px 0">
+      ${reportHtml}`,
+    text: [
+      `✅ SENT TO CLIENT — report automatically e-mailed to ${lead.email}. Follow up within 24 hours.`,
+      "",
+      `Name: ${lead.name} | Phone: ${lead.phone || "—"} | Website: ${lead.url || "—"}`,
+      fetchNote ? `\nNote: ${fetchNote}` : "",
+      "",
+      reportText,
+    ].join("\n"),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[aegis-form-worker] Review e-mail to Robert failed ${res.status}:`, body);
+  }
+}
+
+// ── E-mail: branded client report with pricing + Stripe CTAs ─────────────────
+
+async function sendClientEmail(env, lead, { report, analysisNote }) {
+  const from  = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const replyTo = env.TO_EMAIL || "info@aegisglobalholdings.com";
+  const label = lead.url || lead.name;
+
+  // Resolve recommended + add-on services from the catalog
+  const recommended = report?.recommended_services?.filter(s => SERVICE_CATALOG[s]) ?? [];
+  const addOns      = Object.keys(SERVICE_CATALOG).filter(s => !recommended.includes(s));
+
+  // Build service card HTML
+  function serviceCard(name, isRecommended) {
+    const svc    = SERVICE_CATALOG[name];
+    const link   = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK || null;
+    const cta    = link
+      ? `<a href="${escHtml(link)}"
+           style="display:inline-block;background:${isRecommended ? "#FFB300" : "#f0f0f0"};
+                  color:${isRecommended ? "#1a1300" : "#333"};
+                  font-family:sans-serif;font-weight:700;font-size:14px;
+                  padding:10px 20px;border-radius:4px;text-decoration:none;margin-top:12px">
+           ${isRecommended ? "Get Started →" : "Add This →"}
+         </a>`
+      : `<a href="mailto:${escHtml(replyTo)}?subject=${encodeURIComponent("Aegis: " + name)}"
+           style="display:inline-block;background:#f0f0f0;color:#333;
+                  font-family:sans-serif;font-weight:700;font-size:14px;
+                  padding:10px 20px;border-radius:4px;text-decoration:none;margin-top:12px">
+           Contact Us →
+         </a>`;
+
+    return `
+      <div style="background:${isRecommended ? "#fffbf0" : "#fafafa"};
+                  border:${isRecommended ? "2px solid #FFB300" : "1px solid #e0e0e0"};
+                  border-radius:6px;padding:20px 24px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div style="flex:1;min-width:200px">
+            ${isRecommended ? `<span style="font-family:sans-serif;font-size:11px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">Recommended for You</span><br>` : ""}
+            <strong style="font-family:sans-serif;font-size:16px;color:#0E141B">${escHtml(name)}</strong>
+            <p style="font-family:sans-serif;font-size:14px;color:#555;margin:6px 0 0">${escHtml(svc.tagline)}</p>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <span style="font-family:sans-serif;font-size:22px;font-weight:700;color:#0E141B">${escHtml(svc.price)}</span>
+            <br>${cta}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Report section
+  let reportSection = "";
+  if (report) {
+    reportSection = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0">
+        <tr>
+          <td style="background:#0E141B;border-radius:6px;padding:28px">
+            <p style="font-family:sans-serif;font-size:11px;font-weight:700;color:#FFB300;
+                       text-transform:uppercase;letter-spacing:.12em;margin:0 0 12px">
+              What We Found
+            </p>
+            <p style="font-family:sans-serif;font-size:15px;color:#EAE7E0;margin:0 0 20px;line-height:1.6">
+              ${escHtml(report.summary || "")}
+            </p>
+            <p style="font-family:sans-serif;font-size:12px;font-weight:700;color:#8FA1AF;
+                       text-transform:uppercase;letter-spacing:.1em;margin:20px 0 12px">
+              Gaps Identified
+            </p>
+            <ul style="margin:0;padding-left:20px">
+              ${(report.gaps || []).map(g =>
+                `<li style="font-family:sans-serif;font-size:14px;color:#EAE7E0;margin-bottom:8px;line-height:1.5">${escHtml(g)}</li>`
+              ).join("")}
+            </ul>
+          </td>
+        </tr>
+      </table>`;
+  } else {
+    reportSection = `
+      <p style="font-family:sans-serif;font-size:15px;color:#555;margin:28px 0">
+        ${escHtml(analysisNote || "Your AI visibility check is being processed. We'll follow up with your full report shortly.")}
+      </p>`;
+  }
+
+  const recommendedSection = recommended.length > 0 ? `
+    <h2 style="font-family:sans-serif;font-size:18px;color:#0E141B;margin:36px 0 16px">
+      Recommended For ${escHtml(label)}
+    </h2>
+    ${recommended.map(s => serviceCard(s, true)).join("")}` : "";
+
+  const addOnSection = addOns.length > 0 ? `
+    <h2 style="font-family:sans-serif;font-size:18px;color:#0E141B;margin:36px 0 16px">
+      Additional Services
+    </h2>
+    <p style="font-family:sans-serif;font-size:14px;color:#666;margin:0 0 20px">
+      Everything else we offer — add any of these to your package:
+    </p>
+    ${addOns.map(s => serviceCard(s, false)).join("")}` : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:32px 16px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+
+  <!-- Header -->
+  <tr>
+    <td style="background:#0E141B;padding:28px 32px">
+      <p style="font-family:monospace;font-size:12px;color:#FFB300;margin:0 0 4px;letter-spacing:.12em;text-transform:uppercase">
+        AEGIS GLOBAL HOLDINGS
+      </p>
+      <p style="font-family:sans-serif;font-size:22px;font-weight:700;color:#ffffff;margin:0">
+        Your AI Visibility Report
+      </p>
+      <p style="font-family:monospace;font-size:12px;color:#5C7288;margin:8px 0 0">${escHtml(label)}</p>
+    </td>
+  </tr>
+
+  <!-- Body -->
+  <tr>
+    <td style="padding:32px">
+
+      <p style="font-family:sans-serif;font-size:15px;color:#333;line-height:1.6;margin:0 0 8px">
+        Hi ${escHtml(lead.name.split(" ")[0])},
+      </p>
+      <p style="font-family:sans-serif;font-size:15px;color:#333;line-height:1.6;margin:0 0 4px">
+        We ran your free AI visibility check. Here's what we found and exactly what it would take to fix it.
+      </p>
+
+      ${reportSection}
+
+      ${recommendedSection}
+
+      ${addOnSection}
+
+      <!-- Guarantee note -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:36px 0 0">
+        <tr>
+          <td style="background:#f8f8f8;border-left:3px solid #FFB300;padding:16px 20px;border-radius:0 4px 4px 0">
+            <p style="font-family:sans-serif;font-size:13px;color:#444;margin:0;line-height:1.6">
+              <strong>Veteran-owned. No contracts. No fluff.</strong><br>
+              Every engagement comes with a plain-English deliverable you can take anywhere.
+              If you're not satisfied after the first deliverable, we'll refund you in full.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-family:sans-serif;font-size:14px;color:#666;margin:32px 0 0;line-height:1.6">
+        Questions? Reply to this e-mail — you'll reach Robert directly.<br>
+        <strong style="color:#0E141B">Aegis Global Holdings</strong> · Edmond, OK · Veteran-Owned
+      </p>
+
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background:#0E141B;padding:20px 32px">
+      <p style="font-family:monospace;font-size:11px;color:#3A4A5C;margin:0;text-align:center;letter-spacing:.05em">
+        © 2026 AEGIS GLOBAL HOLDINGS, LLC — EDMOND, OK<br>
+        You received this because you requested a free AI Visibility Check at aegisglobalholdings.com
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
+  // Plain-text fallback
+  const serviceLines = [
+    ...recommended.map(s => {
+      const svc  = SERVICE_CATALOG[s];
+      const link = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK;
+      return `★ ${s} — ${svc.price}\n   ${svc.tagline}${link ? `\n   Get started: ${link}` : ""}`;
+    }),
+    ...addOns.map(s => {
+      const svc  = SERVICE_CATALOG[s];
+      const link = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK;
+      return `  ${s} — ${svc.price}\n   ${svc.tagline}${link ? `\n   Add this: ${link}` : ""}`;
+    }),
+  ];
+
+  const text = [
+    "AEGIS GLOBAL HOLDINGS — Your AI Visibility Report",
+    `${label}`,
+    "",
+    report ? [
+      "WHAT WE FOUND",
+      report.summary || "",
+      "",
+      "Gaps identified:",
+      ...(report.gaps || []).map(g => `  • ${g}`),
+    ].join("\n") : (analysisNote || ""),
+    "",
+    "──────────────────────────────",
+    "SERVICES & PRICING",
+    "",
+    ...serviceLines,
+    "",
+    "──────────────────────────────",
+    "Veteran-owned. No contracts. No fluff.",
+    "Reply to this e-mail to reach Robert directly.",
+    "Aegis Global Holdings · Edmond, OK",
+  ].join("\n");
+
+  const res = await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [lead.email],
+    reply_to: replyTo,
+    subject: `Your AI Visibility Report — ${label}`,
     html,
     text,
   });
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error(`[aegis-form-worker] Review e-mail failed ${res.status}:`, body);
+    console.error(`[aegis-form-worker] Client e-mail failed ${res.status}:`, body);
+  } else {
+    console.log(`[aegis-form-worker] Client e-mail sent to ${lead.email}`);
   }
 }
 

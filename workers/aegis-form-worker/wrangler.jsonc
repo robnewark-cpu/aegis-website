@@ -5,17 +5,28 @@
   "compatibility_date": "2024-09-23",
 
   // Non-secret configuration — safe to commit.
-  // Secrets must be set via the CLI (values are never stored here):
   //
+  // REQUIRED secrets (set via CLI, never commit values):
   //   wrangler secret put RESEND_API_KEY    --name aegis-form-worker
-  //     → paste your Resend key (re_…) from resend.com/api-keys
-  //
   //   wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker
-  //     → paste your Anthropic key (sk-ant-…) from console.anthropic.com
   //
   // FROM_EMAIL domain must be verified in Resend: resend.com/domains
+  //
+  // STRIPE PAYMENT LINKS
+  // Create a Payment Link in your Stripe dashboard for each service
+  // (Stripe Dashboard → Payment Links → + Create), then paste the URL here.
+  // Any service without its own link falls back to STRIPE_BOOKING_LINK.
+  // All links are optional — missing links show a "Contact Us" mailto button.
   "vars": {
     "FROM_EMAIL": "noreply@aegisglobalholdings.com",
-    "TO_EMAIL":   "info@aegisglobalholdings.com"
+    "TO_EMAIL":   "info@aegisglobalholdings.com",
+
+    "STRIPE_BOOKING_LINK":       "",
+    "STRIPE_LINK_AI_AUDIT":      "",
+    "STRIPE_LINK_CONTENT_SCHEMA": "",
+    "STRIPE_LINK_GBP":           "",
+    "STRIPE_LINK_WEBSITE":       "",
+    "STRIPE_LINK_CITATIONS":     "",
+    "STRIPE_LINK_SCHEMA":        ""
   }
 }

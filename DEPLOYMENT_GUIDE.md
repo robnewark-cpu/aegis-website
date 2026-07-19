@@ -63,6 +63,49 @@ cd workers/aegis-form-worker
 npm run tail
 ```
 
+### Stripe payment links — one-time setup
+
+Each service in the client e-mail has its own "Get Started" button linked to a Stripe Payment Link. When a client clicks and pays, Stripe automatically generates an invoice and notifies you.
+
+**Step 1 — Create Payment Links in Stripe**
+
+1. Go to [dashboard.stripe.com/payment-links](https://dashboard.stripe.com/payment-links)
+2. Click **+ New** for each service
+3. Set the price, name, and description to match the service
+4. Copy the resulting URL (looks like `https://buy.stripe.com/xxxx`)
+
+| Service | Default price | `wrangler.jsonc` var |
+|---|---|---|
+| AI Visibility Audit & Strategy | $497 | `STRIPE_LINK_AI_AUDIT` |
+| Content & Schema Rewrite | $1,497 | `STRIPE_LINK_CONTENT_SCHEMA` |
+| Google Business Profile Optimization | $297 | `STRIPE_LINK_GBP` |
+| Website Migration & Redesign | $2,997 | `STRIPE_LINK_WEBSITE` |
+| Local Citation Building | $197 | `STRIPE_LINK_CITATIONS` |
+| Structured Data Implementation | $497 | `STRIPE_LINK_SCHEMA` |
+
+**Step 2 — Paste links into `wrangler.jsonc`**
+
+Open `workers/aegis-form-worker/wrangler.jsonc` and fill in the `[vars]` section:
+```jsonc
+"STRIPE_LINK_AI_AUDIT":      "https://buy.stripe.com/xxxx",
+"STRIPE_LINK_CONTENT_SCHEMA": "https://buy.stripe.com/yyyy",
+// …etc
+```
+
+Or set a single `STRIPE_BOOKING_LINK` as a fallback for all services:
+```jsonc
+"STRIPE_BOOKING_LINK": "https://buy.stripe.com/your-general-link"
+```
+
+**Step 3 — Redeploy**
+```bash
+npm run deploy
+```
+
+**To update prices** — edit the `price` field in `SERVICE_CATALOG` at the top of `src/index.js` and redeploy. The Stripe payment link price is set in the Stripe dashboard independently.
+
+---
+
 ### Worker e-mail flow
 
 | Step | Timing | Description |
