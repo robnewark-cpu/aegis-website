@@ -39,7 +39,7 @@
   .brand{
     font-family:'IBM Plex Mono',monospace;
     font-size:13px;letter-spacing:.08em;color:var(--fog);
-    text-transform:uppercase;
+    text-transform:uppercase;text-decoration:none;
   }
   .brand b{color:var(--paper);}
   .badge{
@@ -165,6 +165,15 @@
     margin-top:14px;text-align:center;letter-spacing:.03em;
   }
   #status{font-size:13px;margin-top:10px;font-family:'IBM Plex Mono',monospace;}
+  .product-link{
+    display:inline-block;margin-top:20px;color:var(--signal);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;
+    letter-spacing:.05em;text-decoration:none;text-transform:uppercase;
+  }
+  .product-link:hover{text-decoration:underline;}
+  .footer-links{display:flex;justify-content:center;flex-wrap:wrap;gap:8px 18px;margin:0 0 14px;padding:0;list-style:none;}
+  .footer-links a{color:var(--fog);text-decoration:none;}
+  .footer-links a:hover{color:var(--signal);}
 
   /* PROCESS */
   .process{padding:64px 24px;border-bottom:1px solid var(--line);}
@@ -193,7 +202,7 @@
 <body>
 
 <header class="top">
-  <div class="brand"><b>AEGIS</b> GLOBAL HOLDINGS</div>
+  <a class="brand" href="/"><b>AEGIS</b> GLOBAL HOLDINGS</a>
   <div class="badge">Veteran-Owned</div>
 </header>
 
@@ -250,12 +259,21 @@
         <span class="step-id">STEP_03</span>
         <strong>You decide what's next</strong>
         <p>If you want help fixing it, we'll show you options. If not, keep the report — no pressure.</p>
+        <a class="product-link" href="/aegisos.html">Explore AegisOS →</a>
       </div>
     </div>
   </div>
 </section>
 
 <footer>
+  <nav aria-label="Footer navigation">
+    <ul class="footer-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/aegisos.html">AegisOS</a></li>
+      <li><a href="/founder-program.html">Founder Program</a></li>
+      <li><a href="/book-demo.html">Book a Demo</a></li>
+    </ul>
+  </nav>
   <p>&copy; 2026 AEGIS GLOBAL HOLDINGS, LLC — EDMOND, OK</p>
 </footer>
 
