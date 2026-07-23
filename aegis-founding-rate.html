@@ -107,14 +107,31 @@
 
   /* CTA */
   .cta-wrap{text-align:center; margin:48px 0 80px;}
+  form.ctaform{
+    max-width:420px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;
+    justify-content:center;
+  }
+  form.ctaform input{
+    flex:1; min-width:220px; background:var(--bg-raise); border:1px solid var(--line);
+    color:var(--fg); padding:16px 18px; border-radius:10px; font-size:0.95rem;
+    font-family:'Inter',sans-serif;
+  }
   .cta{
     display:inline-block; background:var(--accent); color:#fff;
     font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.05rem;
-    padding:16px 40px; border-radius:10px; text-decoration:none;
-    box-shadow:0 8px 30px rgba(59,110,246,0.35);
+    padding:16px 32px; border-radius:10px; text-decoration:none;
+    box-shadow:0 8px 30px rgba(59,110,246,0.35); border:none; cursor:pointer;
   }
   .cta:hover{background:#2f5be0;}
   .urgency{margin-top:14px; color:var(--fg-dim); font-size:0.88rem;}
+  .confirm-block{display:none; margin-top:20px;}
+  .confirm-block p{color:var(--accent-2); font-size:0.95rem; margin-bottom:12px;}
+  .site-link{
+    display:inline-block; border:1px solid var(--accent); color:var(--accent);
+    padding:10px 24px; border-radius:8px; text-decoration:none; font-size:0.9rem;
+    font-weight:600; margin-right:10px;
+  }
+  .mail-link{color:var(--fg-dim); font-size:0.85rem; text-decoration:underline;}
 
   /* Software teaser */
   .teaser{
@@ -184,8 +201,18 @@
   </div>
 
   <div class="cta-wrap">
-    <a href="#" class="cta">Lock In My Founding Rate →</a>
-    <div class="urgency">Offer closes when the countdown hits zero. Setup deposits apply in full on either tier.</div>
+    <form class="ctaform" id="ctaform" onsubmit="showCtaConfirm(event)">
+      <input type="email" placeholder="Your email address" required>
+      <button type="submit" class="cta">Lock In My Founding Rate →</button>
+    </form>
+    <div class="urgency" id="ctaHint">Offer closes when the countdown hits zero. Setup deposits apply in full on either tier.</div>
+    <div class="confirm-block" id="ctaConfirm">
+      <p>You're in — here's where to go next.</p>
+      <a href="https://aegisglobalholdings.com" class="site-link" target="_blank" rel="noopener">Visit Aegis Global Holdings →</a>
+      <div style="margin-top:14px;">
+        <a href="mailto:info@aegisglobalholdings.com" class="mail-link">Or email us directly: info@aegisglobalholdings.com</a>
+      </div>
+    </div>
   </div>
 
   <div class="teaser">
@@ -213,6 +240,13 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  function showCtaConfirm(e){
+    e.preventDefault();
+    document.getElementById('ctaform').style.display = 'none';
+    document.getElementById('ctaHint').style.display = 'none';
+    document.getElementById('ctaConfirm').style.display = 'block';
+  }
 </script>
 
 </body>

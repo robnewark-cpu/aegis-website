@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aegisos — Legal + Lending Case Management. Own It Forever.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0D1210;
+    --bg-raise:#131A17;
+    --fg:#EAF2EE;
+    --fg-dim:#8FA39A;
+    --legal:#5B8CFF;
+    --lending:#2DD4BF;
+    --line:#1F2A26;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--fg);
+    font-family:'Inter',sans-serif; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Sora',sans-serif; letter-spacing:-0.01em;}
+  .wrap{max-width:980px; margin:0 auto; padding:0 24px;}
+
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:28px 0;
+  }
+  .logo{font-family:'Sora',sans-serif; font-weight:700; font-size:1.15rem;}
+  .status{
+    font-size:0.78rem; color:var(--fg-dim); border:1px solid var(--line);
+    padding:6px 14px; border-radius:999px;
+  }
+
+  /* Merge visual */
+  .merge{
+    position:relative; height:220px; margin:40px 0 8px;
+  }
+  .merge svg{width:100%; height:100%;}
+
+  .hero{text-align:center; padding:8px 0 56px;}
+  .hero h1{
+    font-size:clamp(2.2rem,6vw,3.6rem); font-weight:700; line-height:1.08;
+  }
+  .hero .split{
+    display:block;
+  }
+  .hero .split.legal{color:var(--legal);}
+  .hero .split.lending{color:var(--lending);}
+  .hero p.lede{
+    max-width:520px; margin:22px auto 0; color:var(--fg-dim); font-size:1.05rem;
+  }
+
+  .launch-line{
+    text-align:center; margin:36px 0 60px;
+  }
+  .launch-line .tag{
+    font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--fg-dim); font-weight:600;
+  }
+  .launch-line .when{
+    font-family:'Sora',sans-serif; font-size:1.3rem; font-weight:600; margin-top:6px;
+    background:linear-gradient(90deg,var(--legal),var(--lending));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
+  /* Feature pairs */
+  .pairs{
+    display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:64px;
+  }
+  @media (max-width:680px){ .pairs{grid-template-columns:1fr;} }
+  .pair{
+    background:var(--bg-raise); border:1px solid var(--line); border-radius:14px;
+    padding:26px;
+  }
+  .pair.legal-c{border-top:3px solid var(--legal);}
+  .pair.lending-c{border-top:3px solid var(--lending);}
+  .pair .eyebrow{font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--fg-dim); font-weight:600;}
+  .pair h3{font-size:1.15rem; margin-top:8px;}
+  .pair p{color:var(--fg-dim); font-size:0.9rem; margin-top:8px;}
+
+  /* Own it forever */
+  .forever{
+    text-align:center; padding:48px 0; border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line); margin-bottom:64px;
+  }
+  .forever h2{font-size:2rem; font-weight:700;}
+  .forever p{color:var(--fg-dim); margin-top:10px;}
+
+  /* Early access form */
+  .access{text-align:center; padding-bottom:100px;}
+  .access h2{font-size:1.7rem; font-weight:700; margin-bottom:10px;}
+  .access p{color:var(--fg-dim); max-width:480px; margin:0 auto 28px;}
+  form.accessform{
+    max-width:420px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;
+    justify-content:center;
+  }
+  form.accessform input{
+    flex:1; min-width:220px; background:var(--bg-raise); border:1px solid var(--line);
+    color:var(--fg); padding:14px 16px; border-radius:8px; font-size:0.95rem;
+  }
+  form.accessform button{
+    background:linear-gradient(90deg,var(--legal),var(--lending)); color:#06110D;
+    font-weight:700; border:none; padding:14px 24px; border-radius:8px;
+    font-size:0.95rem; cursor:pointer;
+  }
+  .fineprint{margin-top:14px; color:var(--fg-dim); font-size:0.8rem;}
+  .confirm{display:none; margin-top:16px; color:var(--lending); font-size:0.9rem;}
+
+  footer{
+    border-top:1px solid var(--line); padding:32px 0; text-align:center;
+    color:var(--fg-dim); font-size:0.82rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">AEGISOS</div>
+    <div class="status">Launching next month</div>
+  </div>
+
+  <div class="merge">
+    <svg viewBox="0 0 800 220" preserveAspectRatio="none">
+      <path d="M 0 40 C 300 40, 380 110, 400 110" stroke="#5B8CFF" stroke-width="2.5" fill="none" opacity="0.85"/>
+      <path d="M 0 180 C 300 180, 380 110, 400 110" stroke="#2DD4BF" stroke-width="2.5" fill="none" opacity="0.85"/>
+      <path d="M 400 110 C 500 110, 600 110, 800 110" stroke="#EAF2EE" stroke-width="2.5" fill="none" opacity="0.9"/>
+      <circle cx="400" cy="110" r="5" fill="#EAF2EE"/>
+      <text x="20" y="30" fill="#5B8CFF" font-family="Sora, sans-serif" font-size="14" font-weight="600">LEGAL</text>
+      <text x="20" y="200" fill="#2DD4BF" font-family="Sora, sans-serif" font-size="14" font-weight="600">LENDING</text>
+      <text x="620" y="95" fill="#8FA39A" font-family="Sora, sans-serif" font-size="14" font-weight="600">ONE PLATFORM</text>
+    </svg>
+  </div>
+
+  <div class="hero">
+    <h1>
+      <span class="split legal">Legal casework.</span>
+      <span class="split lending">Lending workflows.</span>
+      <span class="split">One system.</span>
+    </h1>
+    <p class="lede">Aegisos handles both legal and lending matters in one platform, so you stop stitching together separate tools for each side of your work.</p>
+  </div>
+
+  <div class="launch-line">
+    <div class="tag">Status</div>
+    <div class="when">Launching next month</div>
+  </div>
+
+  <div class="pairs">
+    <div class="pair legal-c">
+      <span class="eyebrow">Legal side</span>
+      <h3>Case tracking &amp; documents</h3>
+      <p>Manage case timelines, filings, and client communication in one place.</p>
+    </div>
+    <div class="pair lending-c">
+      <span class="eyebrow">Lending side</span>
+      <h3>Loan &amp; portfolio tracking</h3>
+      <p>Track loan status, borrower communication, and servicing workflows alongside your legal matters.</p>
+    </div>
+  </div>
+
+  <div class="forever">
+    <h2>Own it. Not rent it.</h2>
+    <p>Aegisos follows the same principle as Aegis: one-time value, not an endless subscription treadmill.</p>
+  </div>
+
+  <div class="access">
+    <h2>Get early access</h2>
+    <p>Founding Aegis members get free or reduced-rate early access when Aegisos launches next month. Add your email to be notified the moment it's live.</p>
+    <form class="accessform" onsubmit="showConfirm(event)">
+      <input type="email" placeholder="Work email" required>
+      <button type="submit">Notify Me</button>
+    </form>
+    <div class="fineprint">We'll only email you about Aegisos access. Unsubscribe anytime.</div>
+    <div class="confirm" id="confirm">
+      You're on the early access list — we'll be in touch before launch.<br><br>
+      <a href="https://aegisglobalholdings.com" style="color:var(--lending); text-decoration:underline;" target="_blank" rel="noopener">Visit Aegis Global Holdings →</a><br><br>
+      <a href="mailto:info@aegisglobalholdings.com" style="color:var(--fg-dim); text-decoration:underline; font-size:0.85rem;">Or email us directly: info@aegisglobalholdings.com</a>
+    </div>
+  </div>
+
+  <footer>© Aegisos, a product of Aegis Global Holdings. Launching next month.</footer>
+</div>
+
+<script>
+  function showConfirm(e){
+    e.preventDefault();
+    document.getElementById('confirm').style.display = 'block';
+    e.target.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
