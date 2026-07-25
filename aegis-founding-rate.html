@@ -8,153 +8,52 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0B0B0D;
-    --bg-raise:#131316;
-    --fg:#F5F5F0;
-    --fg-dim:#9A9A9F;
-    --accent:#3B6EF6;
-    --accent-2:#E8A33D;
-    --line:#232326;
+    --bg:#0B0B0D; --bg-raise:#131316; --fg:#F5F5F0; --fg-dim:#9A9A9F;
+    --accent:#3B6EF6; --accent-2:#E8A33D; --line:#232326;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:var(--bg);
-    color:var(--fg);
-    font-family:'Inter',sans-serif;
-    line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-  }
-  h1,h2,h3,.display{
-    font-family:'Space Grotesk',sans-serif;
-    letter-spacing:-0.02em;
-  }
+  body{background:var(--bg); color:var(--fg); font-family:'Inter',sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif; letter-spacing:-0.02em;}
   a{color:inherit;}
   .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
-
-  /* Top bar */
-  .topbar{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:24px 0; border-bottom:1px solid var(--line);
-  }
+  .topbar{display:flex; justify-content:space-between; align-items:center; padding:24px 0; border-bottom:1px solid var(--line);}
   .logo{font-weight:700; font-size:1.1rem; letter-spacing:0.02em;}
-  .countdown{
-    display:flex; gap:10px; align-items:center;
-    font-family:'Space Grotesk',sans-serif; font-weight:600;
-    font-size:0.85rem; color:var(--accent-2);
-  }
-  .countdown .box{
-    background:var(--bg-raise); border:1px solid var(--line);
-    padding:6px 10px; border-radius:6px; min-width:44px; text-align:center;
-  }
-
-  /* Hero */
+  .countdown{display:flex; gap:10px; align-items:center; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.85rem; color:var(--accent-2);}
+  .countdown .box{background:var(--bg-raise); border:1px solid var(--line); padding:6px 10px; border-radius:6px; min-width:44px; text-align:center;}
   .hero{padding:88px 0 64px; text-align:center;}
-  .hero h1{
-    font-size:clamp(2.6rem,7vw,5.2rem);
-    font-weight:700; line-height:0.98;
-  }
-  .hero .thin{
-    font-weight:400; font-style:italic; color:var(--fg-dim);
-  }
-  .hero p.lede{
-    max-width:560px; margin:24px auto 0; color:var(--fg-dim); font-size:1.05rem;
-  }
-  .badge{
-    display:inline-block; margin-bottom:20px;
-    border:1px solid var(--accent); color:var(--accent);
-    padding:6px 14px; border-radius:999px; font-size:0.78rem;
-    font-weight:600; letter-spacing:0.04em; text-transform:uppercase;
-  }
-
-  /* Own it forever divider block */
-  .forever{
-    text-align:center; padding:56px 0; margin:64px 0;
-    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-  }
-  .forever .divider{
-    width:64px; height:3px; background:var(--accent); margin:0 auto 28px;
-  }
+  .hero h1{font-size:clamp(2.6rem,7vw,5.2rem); font-weight:700; line-height:0.98;}
+  .hero .thin{font-weight:400; font-style:italic; color:var(--fg-dim);}
+  .hero p.lede{max-width:560px; margin:24px auto 0; color:var(--fg-dim); font-size:1.05rem;}
+  .badge{display:inline-block; margin-bottom:20px; border:1px solid var(--accent); color:var(--accent); padding:6px 14px; border-radius:999px; font-size:0.78rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;}
+  .forever{text-align:center; padding:56px 0; margin:64px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .forever .divider{width:64px; height:3px; background:var(--accent); margin:0 auto 28px;}
   .forever h2{font-size:clamp(2rem,5vw,3rem); font-weight:700;}
   .forever p{color:var(--fg-dim); margin-top:10px; font-size:1.1rem;}
-
-  /* Pricing */
-  .pricing{
-    display:grid; grid-template-columns:1fr 1fr; gap:20px;
-    margin-bottom:64px;
-  }
+  .pricing{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:64px;}
   @media (max-width:720px){ .pricing{grid-template-columns:1fr;} }
-  .tier{
-    background:var(--bg-raise); border:1px solid var(--line);
-    border-radius:14px; padding:32px;
-  }
+  .tier{background:var(--bg-raise); border:1px solid var(--line); border-radius:14px; padding:32px;}
   .tier.annual{border-color:var(--accent);}
-  .tier .eyebrow{
-    font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em;
-    color:var(--fg-dim); font-weight:600;
-  }
+  .tier .eyebrow{font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-dim); font-weight:600;}
   .tier.annual .eyebrow{color:var(--accent);}
-  .tier .save{
-    display:inline-block; margin-top:6px;
-    background:rgba(232,163,61,0.12); color:var(--accent-2);
-    font-size:0.78rem; font-weight:600; padding:4px 10px; border-radius:6px;
-  }
+  .tier .save{display:inline-block; margin-top:6px; background:rgba(232,163,61,0.12); color:var(--accent-2); font-size:0.78rem; font-weight:600; padding:4px 10px; border-radius:6px;}
   .tier h3{font-size:1.4rem; margin-top:16px;}
   table{width:100%; margin-top:20px; border-collapse:collapse;}
-  table td{
-    padding:10px 0; border-top:1px solid var(--line); font-size:0.92rem;
-  }
+  table td{padding:10px 0; border-top:1px solid var(--line); font-size:0.92rem;}
   table td.price{text-align:right; font-family:'Space Grotesk',sans-serif; font-weight:600;}
-
-  /* CTA */
   .cta-wrap{text-align:center; margin:48px 0 80px;}
-  form.ctaform{
-    max-width:420px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;
-    justify-content:center;
-  }
-  form.ctaform input{
-    flex:1; min-width:220px; background:var(--bg-raise); border:1px solid var(--line);
-    color:var(--fg); padding:16px 18px; border-radius:10px; font-size:0.95rem;
-    font-family:'Inter',sans-serif;
-  }
-  .cta{
-    display:inline-block; background:var(--accent); color:#fff;
-    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.05rem;
-    padding:16px 32px; border-radius:10px; text-decoration:none;
-    box-shadow:0 8px 30px rgba(59,110,246,0.35); border:none; cursor:pointer;
-  }
+  form.ctaform{max-width:420px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  form.ctaform input{flex:1; min-width:220px; background:var(--bg-raise); border:1px solid var(--line); color:var(--fg); padding:16px 18px; border-radius:10px; font-size:0.95rem;}
+  .cta{display:inline-block; background:var(--accent); color:#fff; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1.05rem; padding:16px 32px; border-radius:10px; text-decoration:none; box-shadow:0 8px 30px rgba(59,110,246,0.35); border:none; cursor:pointer;}
   .cta:hover{background:#2f5be0;}
   .urgency{margin-top:14px; color:var(--fg-dim); font-size:0.88rem;}
-  .confirm-block{display:none; margin-top:20px;}
-  .confirm-block p{color:var(--accent-2); font-size:0.95rem; margin-bottom:12px;}
-  .site-link{
-    display:inline-block; border:1px solid var(--accent); color:var(--accent);
-    padding:10px 24px; border-radius:8px; text-decoration:none; font-size:0.9rem;
-    font-weight:600; margin-right:10px;
-  }
-  .mail-link{color:var(--fg-dim); font-size:0.85rem; text-decoration:underline;}
-
-  /* Software teaser */
-  .teaser{
-    background:var(--bg-raise); border:1px solid var(--line);
-    border-radius:14px; padding:36px; margin-bottom:80px;
-    display:flex; gap:24px; align-items:center; justify-content:space-between;
-    flex-wrap:wrap;
-  }
+  .teaser{background:var(--bg-raise); border:1px solid var(--line); border-radius:14px; padding:36px; margin-bottom:80px; display:flex; gap:24px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
   .teaser .txt h3{font-size:1.3rem; margin-bottom:6px;}
   .teaser .txt p{color:var(--fg-dim); font-size:0.95rem; max-width:460px;}
-  .teaser .tag{
-    font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em;
-    color:var(--accent-2); font-weight:600; margin-bottom:8px; display:block;
-  }
-
-  footer{
-    border-top:1px solid var(--line); padding:32px 0; text-align:center;
-    color:var(--fg-dim); font-size:0.82rem;
-  }
+  .teaser .tag{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent-2); font-weight:600; margin-bottom:8px; display:block;}
+  footer{border-top:1px solid var(--line); padding:32px 0; text-align:center; color:var(--fg-dim); font-size:0.82rem;}
 </style>
 </head>
 <body>
-
 <div class="wrap">
   <div class="topbar">
     <div class="logo">AEGIS</div>
@@ -182,7 +81,7 @@
       <h3>5% off, every month</h3>
       <table>
         <tr><td>Aegis All-in-one Care Plan</td><td class="price">$1,662.50/mo</td></tr>
-        <tr><td>AI Search &amp; Content Retainer</td><td class="price">$712.50/mo</td></tr>
+        <tr><td>AI Search & Content Retainer</td><td class="price">$712.50/mo</td></tr>
         <tr><td>Care Plan</td><td class="price">$237.50/mo</td></tr>
         <tr><td>Managed Storage</td><td class="price">$118.75/mo</td></tr>
       </table>
@@ -193,7 +92,7 @@
       <h3>2 months free</h3>
       <table>
         <tr><td>Aegis All-in-one Care Plan</td><td class="price">$17,500/yr</td></tr>
-        <tr><td>AI Search &amp; Content Retainer</td><td class="price">$7,500/yr</td></tr>
+        <tr><td>AI Search & Content Retainer</td><td class="price">$7,500/yr</td></tr>
         <tr><td>Care Plan</td><td class="price">$2,500/yr</td></tr>
         <tr><td>Managed Storage</td><td class="price">$1,250/yr</td></tr>
       </table>
@@ -201,25 +100,22 @@
   </div>
 
   <div class="cta-wrap">
-    <form class="ctaform" id="ctaform" onsubmit="showCtaConfirm(event)">
-      <input type="email" placeholder="Your email address" required>
+    <form class="ctaform" action="https://api.web3forms.com/submit" method="POST">
+      <input type="hidden" name="access_key" value="c889feaf-2807-4d74-a14a-556f46bf99ab">
+      <input type="hidden" name="subject" value="New Founding Rate Lead - Aegis">
+      <input type="hidden" name="redirect" value="https://aegisglobalholdings.com/aegisos-early-access.html">
+      
+      <input type="email" name="email" placeholder="Your email address" required>
       <button type="submit" class="cta">Lock In My Founding Rate →</button>
     </form>
-    <div class="urgency" id="ctaHint">Offer closes when the countdown hits zero. Setup deposits apply in full on either tier.</div>
-    <div class="confirm-block" id="ctaConfirm">
-      <p>You're in — here's where to go next.</p>
-      <a href="https://aegisglobalholdings.com" class="site-link" target="_blank" rel="noopener">Visit Aegis Global Holdings →</a>
-      <div style="margin-top:14px;">
-        <a href="mailto:info@aegisglobalholdings.com" class="mail-link">Or email us directly: info@aegisglobalholdings.com</a>
-      </div>
-    </div>
+    <div class="urgency">Offer closes when the countdown hits zero. Setup deposits apply in full on either tier.</div>
   </div>
 
   <div class="teaser">
     <div class="txt">
       <span class="tag">Founding Bonus</span>
-      <h3>Early access to Aegisos</h3>
-      <p>Sign up now and get early access — free or at a reduced rate — to Aegisos, our new legal + lending case management platform, launching next month.</p>
+      <h3>Early access to AegisOS</h3>
+      <p>Sign up now and get early access — free or at a reduced rate — to AegisOS, our legal + lending management platform.</p>
     </div>
   </div>
 
@@ -227,7 +123,6 @@
 </div>
 
 <script>
-  // 48-hour countdown from page load
   const end = Date.now() + 48*60*60*1000;
   function tick(){
     const diff = Math.max(0, end - Date.now());
@@ -240,14 +135,6 @@
   }
   tick();
   setInterval(tick, 1000);
-
-  function showCtaConfirm(e){
-    e.preventDefault();
-    document.getElementById('ctaform').style.display = 'none';
-    document.getElementById('ctaHint').style.display = 'none';
-    document.getElementById('ctaConfirm').style.display = 'block';
-  }
 </script>
-
 </body>
 </html>
