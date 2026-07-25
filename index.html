@@ -16,6 +16,68 @@
   <meta name="twitter:title" content="Aegis Global Holdings | Enterprise Tech Solutions">
   <meta name="twitter:description" content="Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation.">
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=1200&auto=format&fit=crop">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "B2BBusiness",
+    "name": "Aegis Global Holdings, LLC",
+    "url": "https://aegisglobalholdings.com",
+    "email": "info@aegisglobalholdings.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Edmond",
+      "addressRegion": "OK",
+      "addressCountry": "US"
+    },
+    "description": "Veteran-owned enterprise technology consulting firm specializing in application management, data integration, and digital transformation.",
+    "makesOffer": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Application Management"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Data Integration"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Web Design & Development"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Strategic Consulting"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Security & Compliance"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Business Intelligence"
+        }
+      }
+    ]
+  }
+  </script>
+
   <style>
     * {
       margin: 0;
@@ -283,12 +345,6 @@
       margin-bottom: 12px;
     }
 
-    .about-box .stat {
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
     .about-box p {
       font-size: 14px;
       color: #B8C5D6;
@@ -376,23 +432,6 @@
       transform: translateY(0);
     }
 
-    .form-message {
-      text-align: center;
-      font-size: 14px;
-      margin-top: 24px;
-      display: none;
-    }
-
-    .form-message.success {
-      color: #22863a;
-      display: block;
-    }
-
-    .form-message.error {
-      color: #cb2431;
-      display: block;
-    }
-
     /* Footer */
     footer {
       background: var(--navy);
@@ -475,22 +514,6 @@
       }
     }
   </style>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Aegis Global Holdings, LLC",
-    "url": "https://aegisglobalholdings.com",
-    "email": "info@aegisglobalholdings.com",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Edmond",
-      "addressRegion": "OK",
-      "addressCountry": "US"
-    },
-    "description": "Veteran-owned enterprise technology consulting firm specializing in application management, data integration, and digital transformation."
-  }
-  </script>
 </head>
 <body>
   <nav>
@@ -598,7 +621,14 @@
       <h2>Request a Proposal</h2>
       <p class="contact-intro">Tell us about your project. We'll review your requirements and get back to you within 24 business hours.</p>
       
-      <form id="proposalForm">
+      <form action="https://api.web3forms.com/submit" method="POST" id="proposalForm">
+        <!-- Web3Forms Access Key -->
+        <input type="hidden" name="access_key" value="c889feaf-2807-4d74-a14a-556f46bf99ab">
+        <!-- Form Subject -->
+        <input type="hidden" name="subject" value="New Enterprise Proposal Request - Aegis Global Holdings">
+        <!-- Optional Redirect (Uncomment below to redirect after submission) -->
+        <!-- <input type="hidden" name="redirect" value="https://aegisglobalholdings.com/book-demo.html"> -->
+
         <div class="form-group">
           <label for="name">Full Name</label>
           <input type="text" id="name" name="name" required>
@@ -639,16 +669,16 @@
         </div>
 
         <button type="submit" class="btn-submit">Send Proposal Request</button>
-        <div class="form-message" id="formMessage"></div>
       </form>
     </div>
   </section>
   </main>
+
   <footer>
     <div class="container">
       <div class="footer-content">
         <div class="footer-section">
-          <h3>Company</h3>
+          <h4>Company</h4>
           <ul>
             <li><a href="#services">Services</a></li>
             <li><a href="#about">About Us</a></li>
@@ -662,14 +692,14 @@
           </ul>
         </div>
         <div class="footer-section">
-          <h3>Location</h3>
+          <h4>Location</h4>
           <ul>
             <li>Edmond, Oklahoma</li>
             <li><a href="mailto:info@aegisglobalholdings.com">info@aegisglobalholdings.com</a></li>
           </ul>
         </div>
         <div class="footer-section">
-          <h3>Certifications</h3>
+          <h4>Certifications</h4>
           <ul>
             <li>Veteran-Owned Small Business (VOSB)</li>
           </ul>
@@ -681,60 +711,13 @@
     </div>
   </footer>
 
-  <script>
-    const form = document.getElementById('proposalForm');
-    const formMessage = document.getElementById('formMessage');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const formData = {
-        name: document.getElementById('name').value,
-        company: document.getElementById('company').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        service: document.getElementById('service').value,
-        message: document.getElementById('message').value,
-        timestamp: new Date().toISOString()
-      };
-
-      const subject = `Proposal Request from ${formData.company} - ${formData.service}`;
-      const emailBody = `
-Name: ${formData.name}
-Company: ${formData.company}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Service Interest: ${formData.service}
-
-Project Details:
-${formData.message}
-
-Received: ${new Date().toLocaleString()}
-      `.trim();
-
-      const mailtoLink = `mailto:info@aegisglobalholdings.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-      
-      formMessage.textContent = 'Opening email client...';
-      formMessage.className = 'form-message success';
-      
-      window.location.href = mailtoLink;
-
-      setTimeout(() => {
-        formMessage.textContent = 'If your email client didn\'t open, please email us directly at info@aegisglobalholdings.com with your details.';
-        formMessage.className = 'form-message';
-      }, 1500);
-
-      form.reset();
-    });
-  </script>
-
-    <script
-      src="https://site-chatbot-assets.pages.dev/widget.js"
-      data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
-      data-site="aegis"
-      data-name="Aegis Global Holding"
-      data-accent="#0F1B2E"
-      data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
-    ></script>
+  <script
+    src="https://site-chatbot-assets.pages.dev/widget.js"
+    data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
+    data-site="aegis"
+    data-name="Aegis Global Holding"
+    data-accent="#0F1B2E"
+    data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
+  ></script>
 </body>
 </html>
