@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security & Compliance Roadmap | AegisOS</title>
+  <meta name="description" content="What AegisOS has built today—role-based access, an immutable hash-chained audit log, a double-entry general ledger—and where our security and compliance program is headed next.">
+  <link rel="canonical" href="https://aegisglobalholdings.com/security.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aegis Global Holdings">
+  <meta property="og:title" content="Security & Compliance Roadmap | AegisOS">
+  <meta property="og:description" content="What's built today, and where our security and compliance program is headed.">
+  <meta property="og:url" content="https://aegisglobalholdings.com/security.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/aegisos.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container site-header__inner"><a class="brand" href="/">AEGIS <span>OS</span></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span class="nav-toggle__icon"></span></button><nav class="site-nav" id="site-nav" aria-label="Primary navigation"><a href="/aegisos.html">AegisOS</a><a href="/lexflow.html">LexFlow</a><a href="/loanserv.html">LoanServ</a><a href="/security.html" aria-current="page">Security</a><a href="/founder-program.html">Design Partner Program</a><a href="/book-demo.html">Book a Demo</a></nav></div></header>
+  <main id="main-content">
+    <section class="hero"><div class="container hero__inner"><div class="hero__content"><p class="eyebrow">Security & compliance</p><h1>What's built today, and <em>where we're taking it.</em></h1><p class="hero__lede">AegisOS handles client, matter, loan, and financial records for regulated professions. Here's what's in production now, and what our security and compliance program is working toward next. We'll update this page as each milestone is actually reached—not before.</p><div class="button-row"><a class="button" href="/book-demo.html?interest=Security">Discuss Your Requirements</a></div></div></div></section>
+
+    <section class="section"><div class="container"><p class="eyebrow">In production today</p><h2 class="section-title">What AegisOS has built.</h2><p class="section-intro">These are live in LexFlow and LoanServ today, not roadmap items.</p><div class="grid grid--3" style="margin-top:40px">
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 20 7v5c0 4.5-3.2 7.4-8 9-4.8-1.6-8-4.5-8-9V7l8-4z"/><path d="m9 12 2 2 4-4"/></svg></div><h3>Immutable audit log</h3><p>Financial and record actions are written to a hash-chained audit log, so the history of who did what, and when, can't be quietly altered after the fact.</p></article>
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Role-based access</h3><p>Access is granted according to role and responsibility, with authentication, authorization, and multi-tenant separation built into the platform core.</p></article>
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M5 6h14M5 18h14"/></svg></div><h3>Double-entry general ledger</h3><p>A full chart of accounts, journal entries, trial balance, and financial statements—not a spreadsheet layered on top of the app.</p></article>
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h2M13 14h3"/></svg></div><h3>Trust/IOLTA reconciliation</h3><p>Three-way reconciliation keeps bank balance, book balance, and per-matter client ledger balance in agreement.</p></article>
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div><h3>Concurrency-tested billing</h3><p>Time entry, rates, and invoice generation run on an engine tested against simultaneous billing activity across a firm.</p></article>
+      <article class="card card--accent"><div class="card__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v12H9l-4 4z"/><path d="M8 8h8M8 12h5"/></svg></div><h3>Automated backups & restore</h3><p>Production data is backed up on a regular schedule, with tested restore procedures behind the deployment.</p></article>
+    </div></div></section>
+
+    <section class="section section--muted"><div class="container"><p class="eyebrow">Roadmap — not yet achieved</p><h2 class="section-title">Where we're headed, and what we haven't claimed yet.</h2><p class="section-intro">We are not certified or authorized under any of the frameworks below. Listing them here means they're on our roadmap, not that we've completed them.</p>
+      <div class="grid grid--3" style="margin-top:40px">
+        <article class="card"><h3>Third-party security audit</h3><p>We plan to engage an independent firm for a formal security assessment as the customer base using regulated data grows. No audit has been completed to date.</p></article>
+        <article class="card"><h3>Healthcare data handling (MedFlow)</h3><p>MedFlow, our healthcare module, is in development. It is not HIPAA certified today, and we won't claim HIPAA compliance until we've actually completed the work a compliant architecture requires.</p></article>
+        <article class="card"><h3>More granular access scoping</h3><p>Today's access model is role-based. A finer-grained way to scope access is under consideration for larger multi-office deployments, but isn't built yet.</p></article>
+      </div>
+    </div>
+    </section>
+
+    <section class="section"><div class="container feature"><div class="feature-copy"><p class="eyebrow">How we'll communicate this</p><h2 class="section-title">We'll only claim what we can back up.</h2><p>Compliance and security claims carry real legal weight, especially for the firms and lenders we work with. Our policy is to describe exactly what's in production, name what's on the roadmap as roadmap, and update this page—not our marketing copy elsewhere—the moment a milestone is actually reached.</p><div class="button-row"><a class="button" href="/book-demo.html?interest=Security">Ask Us About Your Requirements</a></div></div></div></section>
+
+    <section class="cta-banner"><div class="container cta-banner__inner"><div><h2>Have specific security or compliance requirements?</h2><p>Tell us what you need to see, and we'll give you a direct answer—including where we're not there yet.</p></div><a class="button button--gold" href="/book-demo.html?interest=Security">Book a Demo</a></div></section>
+  </main>
+  <footer class="site-footer"><div class="container site-footer__top"><div><a class="brand" href="/">AEGIS <span>GLOBAL HOLDINGS</span></a><p>Practical technology and operational software for organizations that value clarity, control, and accountable delivery.</p></div><div><h2 class="footer-heading">AegisOS</h2><ul class="footer-links"><li><a href="/aegisos.html">Platform overview</a></li><li><a href="/lexflow.html">LexFlow</a></li><li><a href="/loanserv.html">LoanServ</a></li><li><a href="/medflow.html">MedFlow</a></li><li><a href="/finflow.html">FinFlow</a></li><li><a href="/flowserv.html">FlowServ</a></li></ul></div><div><h2 class="footer-heading">Get started</h2><ul class="footer-links"><li><a href="/founder-program.html">Design Partner Program</a></li><li><a href="/book-demo.html">Book a Demo</a></li><li><a href="/security.html">Security</a></li></ul></div><div><h2 class="footer-heading">Company</h2><ul class="footer-links"><li><a href="/services.html">Services</a></li><li><a href="/about.html">About</a></li><li><a href="mailto:info@aegisglobalholdings.com">Contact</a></li></ul></div></div><div class="container site-footer__bottom"><p>© 2026 Aegis Global Holdings, LLC. All rights reserved.</p><p>Veteran-owned business · Edmond, Oklahoma</p></div></footer>
+  <script src="/aegisos.js"></script>
+  <script src="https://site-chatbot-assets.pages.dev/widget.js" data-worker-url="https://site-chatbots.robert-bb6.workers.dev" data-site="aegis" data-name="Aegis Global Holding" data-accent="#0F1B2E" data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"></script>
+</body>
+</html>
