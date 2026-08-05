@@ -1,5 +1,141 @@
 # Aegis Global Holding Website Deployment Guide
 
+## aegis-form-worker Setup (AI Visibility Check form)
+
+The form on `ai-visibility-check.html` posts to the Cloudflare Worker at
+`https://aegis-form-worker.robert-bb6.workers.dev`. The worker source now lives
+in `workers/aegis-form-worker/`.
+
+### First-time deploy
+
+```bash
+cd workers/aegis-form-worker
+
+# If you previously ran `wrangler init` here, a stale wrangler.jsonc with
+# placeholder values may exist locally and take priority over the repo file.
+# Delete it so the committed wrangler.jsonc (with correct name/date) is used:
+rm -f wrangler.jsonc   # only if YOUR local copy has <WORKER_NAME> placeholders
+
+npm install          # installs wrangler v4
+
+# Log in to your Cloudflare account
+npx wrangler login
+
+# Store secrets (never commit these values)
+npx wrangler secret put RESEND_API_KEY    --name aegis-form-worker
+# → paste your Resend key from https://resend.com/api-keys (starts with "re_")
+
+npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker
+# → paste your Anthropic key from https://console.anthropic.com (starts with "sk-ant-")
+
+# Optional: override sender/recipient at runtime instead of using wrangler.jsonc vars
+# npx wrangler secret put FROM_EMAIL --name aegis-form-worker
+# npx wrangler secret put TO_EMAIL   --name aegis-form-worker
+
+# Deploy
+npm run deploy
+```
+
+### Resend domain verification (fixes 422 / 502 errors)
+
+Resend rejects mail from unverified sender domains with a 422 response, which
+the worker surfaces to the browser as a 502.
+
+1. Go to https://resend.com/domains
+2. Add `aegisglobalholdings.com` and follow the DNS verification steps
+3. Once verified, email from `noreply@aegisglobalholdings.com` will work
+
+Until the domain is verified you can test with `FROM_EMAIL=onboarding@resend.dev`
+— but Resend only allows that address to deliver to the email registered on
+your Resend account.
+
+### Re-deploy after code changes
+
+```bash
+cd workers/aegis-form-worker
+npm run deploy
+```
+
+### Live log tailing (diagnose errors in real time)
+
+```bash
+cd workers/aegis-form-worker
+npm run tail
+```
+
+### Stripe payment links — one-time setup
+
+Each service in the client e-mail has its own "Get Started" button linked to a Stripe Payment Link. When a client clicks and pays, Stripe automatically generates an invoice and notifies you.
+
+**Step 1 — Create Payment Links in Stripe**
+
+1. Go to [dashboard.stripe.com/payment-links](https://dashboard.stripe.com/payment-links)
+2. Click **+ New** for each service
+3. Set the price, name, and description to match the service
+4. Copy the resulting URL (looks like `https://buy.stripe.com/xxxx`)
+
+| Service | Default price | `wrangler.jsonc` var |
+|---|---|---|
+| AI Visibility Audit & Strategy | $497 | `STRIPE_LINK_AI_AUDIT` |
+| Content & Schema Rewrite | $1,497 | `STRIPE_LINK_CONTENT_SCHEMA` |
+| Google Business Profile Optimization | $297 | `STRIPE_LINK_GBP` |
+| Website Migration & Redesign | $2,997 | `STRIPE_LINK_WEBSITE` |
+| Local Citation Building | $197 | `STRIPE_LINK_CITATIONS` |
+| Structured Data Implementation | $497 | `STRIPE_LINK_SCHEMA` |
+
+**Step 2 — Paste links into `wrangler.jsonc`**
+
+Open `workers/aegis-form-worker/wrangler.jsonc` and fill in the `[vars]` section:
+```jsonc
+"STRIPE_LINK_AI_AUDIT":      "https://buy.stripe.com/xxxx",
+"STRIPE_LINK_CONTENT_SCHEMA": "https://buy.stripe.com/yyyy",
+// …etc
+```
+
+Or set a single `STRIPE_BOOKING_LINK` as a fallback for all services:
+```jsonc
+"STRIPE_BOOKING_LINK": "https://buy.stripe.com/your-general-link"
+```
+
+**Step 3 — Redeploy**
+```bash
+npm run deploy
+```
+
+**To update prices** — edit the `price` field in `SERVICE_CATALOG` at the top of `src/index.js` and redeploy. The Stripe payment link price is set in the Stripe dashboard independently.
+
+---
+
+### Worker e-mail flow
+
+| Step | Timing | Description |
+|---|---|---|
+| Notification e-mail | Synchronous (before HTTP 200) | "New AI Visibility Check — {name}" — immediate alert |
+| Website fetch | Background | `fetch(url)`, strip HTML, truncate to 8,000 chars |
+| Anthropic analysis | Background | `claude-sonnet-4-6` assesses AI-search-readiness, returns JSON |
+| Review e-mail | Background | "REVIEW NEEDED: {url} visibility report" — draft for Robert |
+
+The browser sees a 200 response as soon as the notification e-mail is sent. The AI analysis and review e-mail arrive typically within 15–30 seconds.
+
+### Updating the recommended-services list
+
+Edit the `AEGIS_SERVICES` constant at the top of `src/index.js`, then redeploy:
+```bash
+npm run deploy
+```
+
+### Troubleshooting
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `{"error":"Server misconfiguration"}` (500) | `RESEND_API_KEY` not set | `wrangler secret put RESEND_API_KEY --name aegis-form-worker` |
+| Notification e-mail fails (502) with Resend 401 | `RESEND_API_KEY` invalid/revoked | Regenerate key at resend.com/api-keys |
+| Notification e-mail fails (502) with Resend 422 | `FROM_EMAIL` domain not verified | Verify domain at resend.com/domains |
+| Review e-mail missing AI report — note says "ANTHROPIC_API_KEY not configured" | Secret not set | `wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker` |
+| Review e-mail shows "JSON parse failed" with raw text | Claude returned non-JSON | Raw output still included — lead not lost; check logs with `npm run tail` |
+
+---
+
 ## Files Created (Round 2)
 
 ### New Pages
