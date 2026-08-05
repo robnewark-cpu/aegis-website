@@ -55,6 +55,30 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://aegisglobalholdings.com/medflow.html</loc>
+    <lastmod>2026-08-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://aegisglobalholdings.com/finflow.html</loc>
+    <lastmod>2026-08-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://aegisglobalholdings.com/flowserv.html</loc>
+    <lastmod>2026-08-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://aegisglobalholdings.com/security.html</loc>
+    <lastmod>2026-08-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://aegisglobalholdings.com/founder-program.html</loc>
     <lastmod>2026-08-04</lastmod>
     <changefreq>weekly</changefreq>

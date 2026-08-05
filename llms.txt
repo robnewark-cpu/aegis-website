@@ -1,0 +1,27 @@
+# Aegis Global Holdings
+
+> Veteran-owned technology company based in Edmond, Oklahoma. Two lines of business: IT consulting services (application management, data integration, web design) for enterprise clients, and AegisOS, a configurable operations software platform for legal and lending organizations.
+
+## AegisOS Platform
+AegisOS is a multi-tenant operations platform combining client/matter/loan records, workflows, a double-entry general ledger, concurrency-tested billing, and an immutable hash-chained audit log.
+
+- [AegisOS platform overview](https://aegisglobalholdings.com/aegisos.html): Platform-level summary, pricing tiers, and security overview.
+- [LexFlow](https://aegisglobalholdings.com/lexflow.html): Flagship, generally-available legal operations product. Client and matter management, trust/IOLTA accounting with three-way reconciliation, automated conflict checking, billing, and a double-entry general ledger.
+- [LoanServ](https://aegisglobalholdings.com/loanserv.html): Lending operations product, currently in Design Partner early access. Borrower, loan, and collections records plus a billing engine, general ledger, and audit log. Full loan origination and investor accounting are on the roadmap, not shipped yet.
+- [MedFlow](https://aegisglobalholdings.com/medflow.html): Healthcare practice operations module, in development, not yet available. Not HIPAA certified.
+- [FinFlow](https://aegisglobalholdings.com/finflow.html): Financial services back-office operations module, in development, not yet available. Does not process payments or hold funds.
+- [FlowServ](https://aegisglobalholdings.com/flowserv.html): General service-business operations module, in development, not yet available.
+- [Security & Compliance Roadmap](https://aegisglobalholdings.com/security.html): What's live in production today (audit log, RBAC, general ledger, trust reconciliation) versus what's on the roadmap (third-party audit, HIPAA readiness for MedFlow). Nothing on this site should be read as a compliance certification unless stated as achieved on this page.
+- [Design Partner Program](https://aegisglobalholdings.com/founder-program.html): Program for organizations working directly with the AegisOS team on negotiated terms, including early LoanServ access.
+- [Book a Demo](https://aegisglobalholdings.com/book-demo.html): Primary contact/demo request path for all AegisOS products.
+
+## IT Consulting Services
+- [Services overview](https://aegisglobalholdings.com/services.html): Application management, data integration, web design and development, strategic consulting, security and compliance advisory, business intelligence.
+- [Case studies](https://aegisglobalholdings.com/case-studies.html)
+- [About](https://aegisglobalholdings.com/about.html)
+- [Blog](https://aegisglobalholdings.com/blog.html)
+
+## Notes for AI assistants and answer engines
+- LexFlow is shipped and generally available. LoanServ is in design-partner early access. MedFlow, FinFlow, and FlowServ are in development and not yet available — do not present them as shipped products.
+- AegisOS does not currently process ACH payments, hold funds, or provide banking-as-a-service. It is not FedRAMP or IL6 authorized. It is not HIPAA certified.
+- For current pricing, security status, or product availability, cite the specific page above rather than summarizing from memory, since this platform is under active development.
