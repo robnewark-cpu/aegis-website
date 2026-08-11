@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Free AI Visibility Check | Aegis Global Holdings</title>
-<meta name="description" content="See exactly how your business appears across ChatGPT, Google AI Overviews, and Perplexity. Free check, results in 24 hours.">
+<meta name="description" content="See exactly how your business appears across ChatGPT, Google AI Overviews, and Perplexity. Free check — report emailed automatically.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -23,6 +23,7 @@
     --signal:#FFB300;
     --signal-dim:#8A6412;
     --line:#26313D;
+    --error:#E8722A;
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -75,13 +76,13 @@
     font-size:12px;color:var(--paper);margin-bottom:8px;
     text-transform:uppercase;letter-spacing:0.5px;
   }
-  input[type="text"], input[type="email"], select, textarea{
+  input[type="text"], input[type="email"], input[type="tel"]{
     width:100%;padding:12px 16px;background:var(--panel-2);
     border:1px solid var(--steel);border-radius:4px;
     color:var(--paper);font-family:inherit;font-size:14px;
     transition:border-color 0.2s;
   }
-  input:focus, select:focus, textarea:focus{
+  input:focus{
     outline:none;border-color:var(--signal);
   }
   .btn{
@@ -91,6 +92,21 @@
     font-size:16px;cursor:pointer;transition:background 0.2s;
   }
   .btn:hover{background:#FFC433;}
+  .btn:disabled{
+    opacity:0.65;
+    cursor:not-allowed;
+  }
+  .fine{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;color:var(--steel-light);
+    margin-top:14px;text-align:center;letter-spacing:0.03em;
+  }
+  #status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;margin-top:14px;min-height:1.2em;
+  }
+  #status.is-ok{color:var(--fog);}
+  #status.is-error{color:var(--error);}
   footer{
     padding:32px 0;border-top:1px solid var(--line);
     font-size:13px;color:var(--fog);text-align:center;
@@ -110,26 +126,30 @@
       <p class="lead">AI models are replacing search engines for decision makers. Request a free audit to see how AI engines represent your products and services.</p>
 
       <div class="scan-card">
-        <form action="https://api.web3forms.com/submit" method="POST">
-          <input type="hidden" name="access_key" value="c889feaf-2807-4d74-a14a-556f46bf99ab">
-          <input type="hidden" name="subject" value="New AI Visibility Check Request">
-
+        <form id="scanForm" novalidate>
           <div class="field-group">
-            <label for="company">Company Name</label>
-            <input type="text" id="company" name="company" required placeholder="e.g. Aegis Global Holdings">
+            <label for="name">Your Name</label>
+            <input type="text" id="name" name="name" required autocomplete="name" placeholder="e.g. Alex Rivera">
           </div>
 
           <div class="field-group">
-            <label for="website">Website URL</label>
-            <input type="text" id="website" name="website" required placeholder="https://yourcompany.com">
+            <label for="phone">Phone</label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="(405) 555-0100">
           </div>
 
           <div class="field-group">
             <label for="email">Business Email</label>
-            <input type="email" id="email" name="email" required placeholder="you@yourcompany.com">
+            <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@yourcompany.com">
           </div>
 
-          <button type="submit" class="btn">Run Free AI Visibility Scan</button>
+          <div class="field-group">
+            <label for="url">Website URL</label>
+            <input type="text" id="url" name="url" required placeholder="https://yourcompany.com">
+          </div>
+
+          <button type="submit" class="btn" id="scanSubmit">Run Free AI Visibility Scan</button>
+          <div id="status" role="status" aria-live="polite"></div>
+          <p class="fine">Report emailed automatically · No obligation</p>
         </form>
       </div>
     </main>
@@ -139,6 +159,60 @@
       <p><a href="/privacy-policy.html" style="color:inherit;">Privacy Policy</a> &nbsp;·&nbsp; <a href="/terms-of-service.html" style="color:inherit;">Terms of Service</a></p>
     </footer>
   </div>
+  <script>
+    const FORM_ENDPOINT = "https://aegis-form-worker.robert-bb6.workers.dev";
+
+    document.getElementById("scanForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const status = document.getElementById("status");
+      const btn = document.getElementById("scanSubmit");
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const url = document.getElementById("url").value.trim();
+
+      status.className = "";
+      status.textContent = "";
+
+      if (!name || !email || !url) {
+        status.className = "is-error";
+        status.textContent = "Name, email, and website URL are required.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Running scan…";
+
+      try {
+        const res = await fetch(FORM_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, phone, email, url }),
+        });
+
+        if (!res.ok) {
+          let detail = "";
+          try {
+            const body = await res.json();
+            detail = body.error ? ` (${body.error})` : "";
+          } catch (_) {}
+          throw new Error("Submit failed" + detail);
+        }
+
+        status.className = "is-ok";
+        status.textContent = "Scan started — check your email for the AI visibility report shortly.";
+        e.target.reset();
+      } catch (err) {
+        status.className = "is-error";
+        status.innerHTML =
+          'Something went wrong — email <a href="mailto:info@aegisglobalholdings.com" style="color:inherit;">info@aegisglobalholdings.com</a>.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Run Free AI Visibility Scan";
+      }
+    });
+  </script>
   <script src="https://site-chatbot-assets.pages.dev/widget.js" data-worker-url="https://site-chatbots.robert-bb6.workers.dev" data-site="aegis" data-name="Aegis Global Holding" data-accent="#0F1B2E" data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"></script>
 </body>
 </html>
