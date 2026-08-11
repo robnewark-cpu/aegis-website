@@ -122,10 +122,30 @@ Rules:
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
+    const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
+
+    // GET /health — boolean secret status only (no secret values)
+    if (request.method === "GET" && (url.pathname === "/health" || url.pathname === "/")) {
+      const anthropicConfigured = Boolean(env.ANTHROPIC_API_KEY);
+      const resendConfigured = Boolean(env.RESEND_API_KEY);
+      return jsonResponse(
+        {
+          ok: resendConfigured && anthropicConfigured,
+          resendConfigured,
+          anthropicConfigured,
+          hint: anthropicConfigured
+            ? undefined
+            : "Run: npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker",
+        },
+        anthropicConfigured && resendConfigured ? 200 : 503,
+        origin,
+      );
+    }
+
     if (request.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405, origin);
     }
@@ -134,7 +154,7 @@ export default {
     try { data = await request.json(); }
     catch { return jsonResponse({ error: "Invalid JSON body" }, 400, origin); }
 
-    const { name, phone, email, url } = data;
+    const { name, phone, email, url: siteUrl } = data;
     if (!name || !email) {
       return jsonResponse({ error: "name and email are required" }, 400, origin);
     }
@@ -143,10 +163,11 @@ export default {
       return jsonResponse({ error: "Server misconfiguration" }, 500, origin);
     }
 
-    const lead = { name, phone, email, url };
+    const lead = { name, phone, email, url: siteUrl };
+    const anthropicConfigured = Boolean(env.ANTHROPIC_API_KEY);
 
     // 1. Immediate notification to Robert (synchronous)
-    const notifyOk = await sendNotificationEmail(env, lead);
+    const notifyOk = await sendNotificationEmail(env, lead, { anthropicConfigured });
     if (!notifyOk) {
       return jsonResponse({ error: "Email service error" }, 502, origin);
     }
@@ -154,8 +175,18 @@ export default {
     // 2. Background: fetch site → analyze → send both emails
     ctx.waitUntil(runAiAnalysis(env, lead));
 
-    // 3. Browser sees success immediately
-    return jsonResponse({ success: true }, 200, origin);
+    // 3. Browser sees success immediately (analysis may still be degraded if Anthropic secret missing)
+    return jsonResponse(
+      {
+        success: true,
+        anthropicConfigured,
+        warning: anthropicConfigured
+          ? undefined
+          : "ANTHROPIC_API_KEY not configured — emails will send without an AI report",
+      },
+      200,
+      origin,
+    );
   },
 };
 
@@ -279,15 +310,32 @@ async function callAnthropic(env, lead, siteText, fetchNote) {
 
 // ── E-mail: immediate notification ───────────────────────────────────────────
 
-async function sendNotificationEmail(env, lead) {
+async function sendNotificationEmail(env, lead, { anthropicConfigured } = {}) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to   = env.TO_EMAIL   || "info@aegisglobalholdings.com";
+  const aiReady = anthropicConfigured ?? Boolean(env.ANTHROPIC_API_KEY);
+
+  const configWarningHtml = aiReady
+    ? `<p style="font-family:sans-serif;font-size:13px;color:#5C7288;margin-top:20px">
+        AI report generating — client e-mail will be sent automatically in ~30 seconds.
+      </p>`
+    : `<p style="font-family:sans-serif;font-size:13px;color:#842029;background:#f8d7da;border:1px solid #f5c2c7;padding:12px 16px;margin-top:20px">
+        <strong>⚠ ANTHROPIC_API_KEY is not configured on aegis-form-worker.</strong><br>
+        Emails will still send, but without an AI visibility report.<br>
+        Fix: <code>npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker</code>
+      </p>`;
+
+  const configWarningText = aiReady
+    ? "AI report generating — client e-mail sends automatically."
+    : "⚠ ANTHROPIC_API_KEY is not configured — emails will send without an AI report.\nFix: npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker";
 
   const res = await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     reply_to: lead.email,
-    subject: `New AI Visibility Check — ${lead.name}`,
+    subject: aiReady
+      ? `New AI Visibility Check — ${lead.name}`
+      : `⚠ New AI Visibility Check (NO AI KEY) — ${lead.name}`,
     html: `
       <h2 style="font-family:sans-serif;color:#0E141B">New AI Visibility Check Submission</h2>
       <table style="font-family:sans-serif;font-size:15px;border-collapse:collapse" cellpadding="8">
@@ -296,9 +344,7 @@ async function sendNotificationEmail(env, lead) {
         <tr><td><strong>Email</strong></td><td>${escHtml(lead.email)}</td></tr>
         <tr><td><strong>Website</strong></td><td>${escHtml(lead.url || "—")}</td></tr>
       </table>
-      <p style="font-family:sans-serif;font-size:13px;color:#5C7288;margin-top:20px">
-        AI report generating — client e-mail will be sent automatically in ~30 seconds.
-      </p>`,
+      ${configWarningHtml}`,
     text: [
       "New AI Visibility Check Submission",
       `Name:    ${lead.name}`,
@@ -306,7 +352,7 @@ async function sendNotificationEmail(env, lead) {
       `Email:   ${lead.email}`,
       `Website: ${lead.url || "—"}`,
       "",
-      "AI report generating — client e-mail sends automatically.",
+      configWarningText,
     ].join("\n"),
   });
 
@@ -674,7 +720,7 @@ function corsHeaders(origin) {
       : "https://aegisglobalholdings.com";
   return {
     "Access-Control-Allow-Origin":  allowed,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age":       "86400",
   };
