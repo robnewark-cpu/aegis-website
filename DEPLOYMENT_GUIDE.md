@@ -124,6 +124,35 @@ Edit the `AEGIS_SERVICES` constant at the top of `src/index.js`, then redeploy:
 npm run deploy
 ```
 
+### Required: ANTHROPIC_API_KEY (AI report)
+
+If review/client emails say **`ANTHROPIC_API_KEY not configured — no AI analysis performed.`**,
+Resend is working but Claude is not. Set the Worker secret (this is **not** a website HTML issue):
+
+```bash
+cd workers/aegis-form-worker
+npx wrangler login   # if needed
+npx wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker
+# paste sk-ant-... from https://console.anthropic.com
+```
+
+Verify without submitting a lead:
+
+```bash
+curl -s https://aegis-form-worker.robert-bb6.workers.dev/health
+# Expect: {"ok":true,"resendConfigured":true,"anthropicConfigured":true}
+```
+
+`anthropicConfigured: false` means the secret is still missing on the live Worker.
+After `secret put`, no redeploy is required — secrets apply immediately.
+
+Confirm secrets are present (names only):
+
+```bash
+npx wrangler secret list --name aegis-form-worker
+# should include ANTHROPIC_API_KEY and RESEND_API_KEY
+```
+
 ### Troubleshooting
 
 | Symptom | Root cause | Fix |
@@ -131,7 +160,8 @@ npm run deploy
 | `{"error":"Server misconfiguration"}` (500) | `RESEND_API_KEY` not set | `wrangler secret put RESEND_API_KEY --name aegis-form-worker` |
 | Notification e-mail fails (502) with Resend 401 | `RESEND_API_KEY` invalid/revoked | Regenerate key at resend.com/api-keys |
 | Notification e-mail fails (502) with Resend 422 | `FROM_EMAIL` domain not verified | Verify domain at resend.com/domains |
-| Review e-mail missing AI report — note says "ANTHROPIC_API_KEY not configured" | Secret not set | `wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker` |
+| Review e-mail missing AI report — note says "ANTHROPIC_API_KEY not configured" | Secret not set on Worker | `wrangler secret put ANTHROPIC_API_KEY --name aegis-form-worker` then `curl …/health` |
+| `/health` returns `anthropicConfigured: false` (503) | Same as above | Set `ANTHROPIC_API_KEY` Worker secret |
 | Review e-mail shows "JSON parse failed" with raw text | Claude returned non-JSON | Raw output still included — lead not lost; check logs with `npm run tail` |
 
 ---
