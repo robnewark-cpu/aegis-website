@@ -1,171 +1,133 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Book an AegisOS Demo | Aegis Global Holdings</title>
-  <meta name="description" content="Book an AegisOS demo to discuss LexFlow or LoanServ for your legal or lending operations.">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book a Demo | Aegis Global Holdings</title>
+  <meta name="description" content="Book a demo of AegisOS and its vertical modules for legal, lending, healthcare, finance, and field service teams.">
   <link rel="canonical" href="https://aegisglobalholdings.com/book-demo.html">
-  <meta name="robots" content="index,follow">
+  <meta property="og:title" content="Book a Demo | Aegis Global Holdings">
+  <meta property="og:description" content="Book a demo of AegisOS and its vertical modules for legal, lending, healthcare, finance, and field service teams.">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Aegis Global Holdings">
-  <meta property="og:title" content="Book an AegisOS Demo">
-  <meta property="og:description" content="See how AegisOS can connect records, documents, tasks, and workflows for your organization.">
   <meta property="og:url" content="https://aegisglobalholdings.com/book-demo.html">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="/aegisos.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
-    <div class="container site-header__inner">
-      <a class="brand" href="/">AEGIS <span>OS</span></a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span class="nav-toggle__icon"></span></button>
-      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
-        <a href="/aegisos.html">AegisOS</a>
-        <a href="/lexflow.html">LexFlow</a>
-        <a href="/loanserv.html">LoanServ</a>
-        <a href="/security.html">Security</a>
-        <a href="/founder-program.html">Design Partner Program</a>
-        <a href="/book-demo.html" aria-current="page">Book a Demo</a>
+    <div class="container">
+      <a class="brand" href="index.html">AEGIS<span class="accent"></span></a>
+      <nav class="main-nav" aria-label="Primary">
+        <ul>
+        <li><a href="index.html#services">Services</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="blog.html">Blog</a></li>
+        <li><a href="case-studies.html">Case Studies</a></li>
+        <li><a href="aegisos.html">AegisOS</a></li>
+        <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
+        <li><a href="book-demo.html">Book a Demo</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+        </ul>
       </nav>
+      <span class="badge-flag">&#127482;&#127480; Veteran-Owned Business</span>
     </div>
   </header>
-  <main id="main-content">
-    <section class="section section--muted">
+  <main>
+    <section class="hero">
       <div class="container">
-        <div class="form-shell">
-          <div class="form-card">
-            <p class="eyebrow">See AegisOS in context</p>
-            <h1>Book your AegisOS demo.</h1>
-            <p>Tell us a little about your organization. We will use the conversation to understand your current operations and show the relevant AegisOS workflow.</p>
-            
-            <form action="https://api.web3forms.com/submit" method="POST">
-              <input type="hidden" name="access_key" value="c889feaf-2807-4d74-a14a-556f46bf99ab">
-              <input type="hidden" name="subject" value="New AegisOS Demo Request">
-              
-              <div class="form-grid">
-                <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
-                <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" required></div>
-                <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required></div>
-                <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel" required></div>
-                <div class="field">
-                  <label for="organization-type">Organization type</label>
-                  <select id="organization-type" name="organizationType" required>
-                    <option value="">Select one</option>
-                    <option value="Law firm">Law firm</option>
-                    <option value="In-house legal team">In-house legal team</option>
-                    <option value="Lender">Lender</option>
-                    <option value="Loan servicing team">Loan servicing team</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="user-count">Number of users</label>
-                  <select id="user-count" name="userCount" required>
-                    <option value="">Select one</option>
-                    <option value="1">1</option>
-                    <option value="2-5">2–5</option>
-                    <option value="6-15">6–15</option>
-                    <option value="16-50">16–50</option>
-                    <option value="51+">51+</option>
-                  </select>
-                </div>
-                <div class="field field--full">
-                  <label for="interest">What would you like to discuss?</label>
-                  <select id="interest" name="interest" data-prefill="interest">
-                    <option value="">Select an option</option>
-                    <option value="AegisOS Platform">AegisOS platform</option>
-                    <option value="LexFlow">LexFlow</option>
-                    <option value="LoanServ">LoanServ</option>
-                    <option value="MedFlow">MedFlow (waitlist)</option>
-                    <option value="FinFlow">FinFlow (waitlist)</option>
-                    <option value="FlowServ">FlowServ (waitlist)</option>
-                    <option value="Security">Security & compliance questions</option>
-                    <option value="Design Partner Program">Design Partner Program</option>
-                    <option value="Practice Launch">Practice Launch tier</option>
-                    <option value="Professional">Professional tier</option>
-                    <option value="Enterprise">Enterprise tier</option>
-                  </select>
-                </div>
-                <div class="field field--full"><label for="comments">Comments</label><textarea id="comments" name="comments" placeholder="What is working well today, and where does your team need more operational clarity?"></textarea></div>
-              </div>
-              <div class="button-row" style="margin-top:20px;"><button class="button" type="submit">Request My Demo</button></div>
-              <p class="form-note" style="margin-top:12px;">By submitting this form, you agree that Aegis Global Holdings may contact you about your request. We do not sell your contact information.</p>
-            </form>
+        <h1>Book a Demo</h1>
+        <p class="lede">See AegisOS and its modules in action. Tell us a bit about your organization and we&rsquo;ll set up a time.</p>
+      </div>
+    </section>
+    <section class="alt">
+      <div class="container">
+        <div id="demo-success" class="success-msg">Thank you &mdash; we&rsquo;ve received your request and will follow up to schedule your demo.</div>
+        <form class="stack" id="demo-form" action="https://formsubmit.co/info@aegisglobalholdings.com" method="POST">
+          <input type="hidden" name="_subject" value="New demo request &mdash; aegisglobalholdings.com">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_template" value="table">
+          <div><label for="name">Full Name</label><input type="text" id="name" name="Name" required></div>
+          <div><label for="company">Company Name</label><input type="text" id="company" name="Company" required></div>
+          <div><label for="email">Email Address</label><input type="email" id="email" name="Email" required></div>
+          <div><label for="module">Module of Interest</label>
+            <select id="module" name="Module" required>
+              <option value="">Select a module...</option>
+              <option>AegisOS (Platform)</option>
+              <option>LexFlow</option>
+              <option>LoanServ</option>
+              <option>MedFlow</option>
+              <option>FinFlow</option>
+              <option>FlowServ</option>
+            </select>
           </div>
-          <aside class="form-aside">
-            <p class="eyebrow">What to expect</p>
-            <h2>A focused conversation about your operation.</h2>
-            <p>We will tailor the demo to the records, workflows, documents, and work queues your team needs to coordinate.</p>
-            <ul class="check-list">
-              <li>Discuss your legal or lending workflow</li>
-              <li>See the relevant AegisOS product path</li>
-              <li>Explore Design Partner Program eligibility</li>
-              <li>Review onboarding priorities</li>
-            </ul>
-          </aside>
-        </div>
+          <button class="btn btn-teal" type="submit">Request Demo</button>
+        </form>
       </div>
     </section>
-    <section class="section">
-      <div class="container use-cases">
-        <div>
-          <p class="eyebrow">Not ready for a demo?</p>
-          <h2 class="section-title">Start with the product information that matters to you.</h2>
-          <p class="section-intro">Explore AegisOS and its legal and lending products, or see whether the Design Partner Program is a fit.</p>
-        </div>
-        <ul class="use-cases__list">
-          <li><a href="/aegisos.html">Explore AegisOS</a></li>
-          <li><a href="/lexflow.html">Explore LexFlow</a></li>
-          <li><a href="/loanserv.html">Explore LoanServ</a></li>
-          <li><a href="/security.html">Security & Compliance Roadmap</a></li>
-          <li><a href="/founder-program.html">Explore Design Partner Program</a></li>
-        </ul>
-      </div>
-    </section>
+    <script>
+      document.getElementById('demo-form').addEventListener('submit', function () {
+        setTimeout(function () {
+          document.getElementById('demo-success').style.display = 'block';
+        }, 300);
+      });
+    </script>
   </main>
   <footer class="site-footer">
-    <div class="container site-footer__top">
-      <div>
-        <a class="brand" href="/">AEGIS <span>GLOBAL HOLDINGS</span></a>
-        <p>Practical technology and operational software for organizations that value clarity, control, and accountable delivery.</p>
+    <div class="container">
+      <div class="foot-grid">
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="index.html#about">About Us</a></li>
+            <li><a href="security.html">Security</a></li>
+            <li><a href="founder-program.html">Design Partner Program</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="case-studies.html">Case Studies</a></li>
+            <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
+            <li><a href="book-demo.html">Book a Demo</a></li>
+            <li><a href="ai-visibility-check.html">Free AI Scan</a></li>
+            <li><a href="index.html#contact">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Products</h4>
+          <ul>
+          <li><a href="aegisos.html">AegisOS</a></li>
+          <li><a href="lexflow.html">LexFlow</a></li>
+          <li><a href="loanserv.html">LoanServ</a></li>
+          <li><a href="medflow.html">MedFlow</a></li>
+          <li><a href="finflow.html">FinFlow</a></li>
+          <li><a href="flowserv.html">FlowServ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Location</h4>
+          <ul>
+            <li>Edmond, Oklahoma</li>
+            <li><a href="mailto:info@aegisglobalholdings.com">info@aegisglobalholdings.com</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms-of-service.html">Terms of Service</a></li>
+          </ul>
+          <h4 style="margin-top:18px;">Certifications</h4>
+          <ul><li>Veteran-Owned Small Business (VOSB)</li></ul>
+        </div>
       </div>
-      <div>
-        <h2 class="footer-heading">AegisOS</h2>
-        <ul class="footer-links">
-          <li><a href="/aegisos.html">Platform overview</a></li>
-          <li><a href="/lexflow.html">LexFlow</a></li>
-          <li><a href="/loanserv.html">LoanServ</a></li>
-          <li><a href="/medflow.html">MedFlow</a></li>
-          <li><a href="/finflow.html">FinFlow</a></li>
-          <li><a href="/flowserv.html">FlowServ</a></li>
-        </ul>
+      <div class="legal">
+        <p>&copy; 2026 Aegis Global Holdings, LLC. All rights reserved.</p>
       </div>
-      <div>
-        <h2 class="footer-heading">Get started</h2>
-        <ul class="footer-links">
-          <li><a href="/founder-program.html">Design Partner Program</a></li>
-          <li><a href="/book-demo.html">Book a Demo</a></li>
-          <li><a href="/security.html">Security</a></li>
-          <li><a href="/ai-visibility-check.html">Free AI Visibility Check</a></li>
-        </ul>
-      </div>
-      <div>
-        <h2 class="footer-heading">Company</h2>
-        <ul class="footer-links">
-          <li><a href="/services.html">Services</a></li>
-          <li><a href="/about.html">About</a></li>
-          <li><a href="mailto:info@aegisglobalholdings.com">Contact</a></li><li><a href="/privacy-policy.html">Privacy Policy</a></li><li><a href="/terms-of-service.html">Terms of Service</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="container site-footer__bottom">
-      <p>© 2026 Aegis Global Holdings, LLC. All rights reserved.</p>
-      <p>Veteran-owned business · Edmond, Oklahoma</p>
     </div>
   </footer>
-  <script src="/aegisos.js"></script>
-  <script src="https://site-chatbot-assets.pages.dev/widget.js" data-worker-url="https://site-chatbots.robert-bb6.workers.dev" data-site="aegis" data-name="Aegis Global Holding" data-accent="#0F1B2E" data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"></script>
+  <script
+  src="https://site-chatbot-assets.pages.dev/widget.js"
+  data-backend="https://site-chatbots.robert-bb6.workers.dev"
+  data-site="aegis"
+  async
+  defer></script>
 </body>
 </html>

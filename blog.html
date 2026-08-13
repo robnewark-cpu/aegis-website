@@ -1,852 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aegis Global Holdings - Blog</title>
-    <meta name="description" content="Industry insights and best practices for application management, data integration, and digital transformation from Aegis Global Holdings, an Oklahoma firm.">
-    <link rel="canonical" href="https://aegisglobalholdings.com/blog.html">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --navy: #0F1B2E;
-            --teal: #00D9FF;
-            --gold: #B8860B;
-            --light-bg: #F5F7FA;
-            --dark-text: #1A2332;
-            --gray: #6B7280;
-            --border: #E5E7EB;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --light-bg: #1A2332;
-                --dark-text: #F5F7FA;
-                --border: #374151;
-            }
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--dark-text);
-            background: var(--light-bg);
-        }
-
-        /* Navigation */
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 5%;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            nav {
-                background: var(--navy);
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            }
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--navy);
-            text-decoration: none;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .logo {
-                color: var(--teal);
-            }
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            text-decoration: none;
-            color: var(--dark-text);
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: var(--teal);
-        }
-
-        @media (max-width: 768px) {
-            nav {
-                flex-direction: column;
-                gap: 1rem;
-                padding: 1rem 5%;
-            }
-
-            .nav-links {
-                gap: 1rem;
-                font-size: 0.9rem;
-            }
-        }
-
-        /* Hero */
-        .hero {
-            background:
-              linear-gradient(135deg, rgba(15, 27, 46, 0.93) 0%, rgba(26, 58, 82, 0.93) 100%),
-              url('https://images.unsplash.com/photo-1558494949-ef010cbdcc31?fm=jpg&q=80&w=2000&auto=format&fit=crop') center/cover no-repeat;
-            color: white;
-            padding: 4rem 5%;
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .hero p {
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-
-        @media (max-width: 768px) {
-            .hero {
-                padding: 2rem 5%;
-            }
-
-            .hero h1 {
-                font-size: 1.8rem;
-            }
-
-            .hero p {
-                font-size: 1rem;
-            }
-        }
-
-        /* Blog Container */
-        .blog-container {
-            max-width: 900px;
-            margin: 3rem auto;
-            padding: 0 5%;
-        }
-
-        /* Article Card Grid */
-        .articles-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .article-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-            text-decoration: none;
-            color: inherit;
-            display: flex;
-            flex-direction: column;
-            cursor: pointer;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .article-card {
-                background: #1F2937;
-                border-color: var(--border);
-            }
-        }
-
-        .article-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .article-card:hover {
-                box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            }
-        }
-
-        .article-card-header {
-            background: linear-gradient(135deg, var(--navy), var(--teal));
-            color: white;
-            padding: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 150px;
-            text-align: center;
-        }
-
-        .article-card-header h3 {
-            font-size: 1.3rem;
-            line-height: 1.4;
-        }
-
-        .article-card-body {
-            padding: 1.5rem;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .article-meta {
-            font-size: 0.85rem;
-            color: var(--gray);
-            margin-bottom: 1rem;
-        }
-
-        .article-excerpt {
-            color: var(--gray);
-            margin-bottom: 1rem;
-            flex-grow: 1;
-        }
-
-        .article-link {
-            color: var(--teal);
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: gap 0.3s;
-        }
-
-        .article-link:hover {
-            gap: 1rem;
-        }
-
-        /* Full Article View */
-        .article-full {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 3rem;
-            margin-bottom: 3rem;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .article-full {
-                background: #1F2937;
-            }
-        }
-
-        .article-full h2 {
-            color: var(--navy);
-            margin: 2rem 0 1rem;
-            font-size: 1.8rem;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .article-full h2 {
-                color: var(--teal);
-            }
-        }
-
-        .article-full h3 {
-            color: var(--navy);
-            margin: 1.5rem 0 0.75rem;
-            font-size: 1.3rem;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .article-full h3 {
-                color: var(--teal);
-            }
-        }
-
-        .article-full p {
-            margin-bottom: 1rem;
-            line-height: 1.8;
-        }
-
-        .article-full ul, .article-full ol {
-            margin-left: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .article-full li {
-            margin-bottom: 0.5rem;
-        }
-
-        .article-full .timestamp {
-            color: var(--gray);
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1rem;
-        }
-
-        .article-full .highlight-box {
-            background: linear-gradient(135deg, var(--navy), #1a3a52);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 6px;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--teal);
-        }
-
-        .back-link {
-            color: var(--teal);
-            text-decoration: none;
-            margin-bottom: 2rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 768px) {
-            .article-full {
-                padding: 1.5rem;
-            }
-
-            .article-full h2 {
-                font-size: 1.4rem;
-            }
-        }
-
-        /* Footer */
-        footer {
-            background: var(--navy);
-            color: white;
-            padding: 2rem 5%;
-            text-align: center;
-            margin-top: 4rem;
-        }
-
-        footer p {
-            margin-bottom: 0.5rem;
-        }
-
-        footer a {
-            color: var(--teal);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            font-size: 0.9rem;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .social-links a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: var(--teal);
-            color: var(--navy);
-            border-radius: 50%;
-            text-decoration: none;
-            font-weight: 600;
-            transition: transform 0.3s;
-        }
-
-        .social-links a:hover {
-            transform: scale(1.1);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog | Aegis Global Holdings</title>
+  <meta name="description" content="Insights on application management, data integration, digital transformation, and security from Aegis Global Holdings.">
+  <link rel="canonical" href="https://aegisglobalholdings.com/blog.html">
+  <meta property="og:title" content="Blog | Aegis Global Holdings">
+  <meta property="og:description" content="Insights on application management, data integration, digital transformation, and security from Aegis Global Holdings.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://aegisglobalholdings.com/blog.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="styles.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Aegis Global Holdings, LLC",
-    "url": "https://aegisglobalholdings.com",
-    "email": "info@aegisglobalholdings.com",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Edmond",
-      "addressRegion": "OK",
-      "addressCountry": "US"
-    },
-    "description": "Veteran-owned enterprise technology consulting firm specializing in application management, data integration, and digital transformation."
-  }
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Aegis Global Holdings Blog",
+  "description": "Insights on application management, data integration, digital transformation, and security from Aegis Global Holdings.",
+  "url": "https://aegisglobalholdings.com/blog.html"
+}
   </script>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
-        <a href="/" class="logo">Aegis Global Holdings</a>
-        <ul class="nav-links">
-            <li><a href="/">Home</a></li>
-            <li><a href="/blog.html">Blog</a></li>
-            <li><a href="/services.html">Services</a></li>
-            <li><a href="/about.html">About</a></li>
-            <li><a href="/case-studies.html">Case Studies</a></li>
-            <li><a href="/aegisos.html">AegisOS</a></li>
-            <li><a href="/book-demo.html">Book a Demo</a></li>
+
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html">AEGIS<span class="accent"></span></a>
+      <nav class="main-nav" aria-label="Primary">
+        <ul>
+        <li><a href="index.html#services">Services</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="blog.html" aria-current="page">Blog</a></li>
+        <li><a href="case-studies.html">Case Studies</a></li>
+        <li><a href="aegisos.html">AegisOS</a></li>
+        <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
+        <li><a href="book-demo.html">Book a Demo</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
         </ul>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <h1>Industry Insights & Best Practices</h1>
-        <p>Exploring application management, data integration, and digital transformation strategies</p>
-    </section>
-
-    <!-- Blog Container -->
-    <div class="blog-container">
-        <!-- Articles Grid -->
-        <div class="articles-grid" id="articlesGrid">
-            <!-- Articles will be loaded here -->
-        </div>
+      </nav>
+      <span class="badge-flag">&#127482;&#127480; Veteran-Owned Business</span>
     </div>
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-links">
-            <a href="/">Home</a>
-            <a href="/services.html">Services</a>
-            <a href="/about.html">About</a>
-            <a href="/blog.html">Blog</a>
-            <a href="/case-studies.html">Case Studies</a>
-            <a href="/aegisos.html">AegisOS</a>
-            <a href="/founder-program.html">Design Partner Program</a>
-            <a href="/book-demo.html">Book a Demo</a>
-            <a href="/ai-visibility-check.html">Free AI Scan</a>
-            <a href="/privacy-policy.html">Privacy Policy</a>
-            <a href="/terms-of-service.html">Terms of Service</a>
-            <a href="/sitemap.xml">Sitemap</a>
+  </header>
+    <main>
+    <section class="hero">
+      <div class="container">
+        <h1>Blog</h1>
+        <p class="lede">Practical insights on application management, data integration, digital transformation, and security for enterprise teams.</p>
+      </div>
+    </section>
+    <section class="alt">
+      <div class="container">
+        <div class="grid-3">
+          <div class="card"><h3>Application Management Best Practices</h3><p>How to keep critical business applications performant, secure, and reliably up to date.</p></div>
+          <div class="card"><h3>Common Data Integration Challenges</h3><p>What typically breaks when connecting legacy and modern systems &mdash; and how to plan around it.</p></div>
+          <div class="card"><h3>Web Design Strategy for Enterprise</h3><p>Building web platforms that scale with the organization, not just the initial launch.</p></div>
+          <div class="card"><h3>Building a Digital Transformation Roadmap</h3><p>A practical approach to sequencing technology modernization projects.</p></div>
+          <div class="card"><h3>Assessing Cloud Readiness</h3><p>Questions to ask before committing to a cloud migration timeline.</p></div>
+          <div class="card"><h3>Understanding IT Security Frameworks</h3><p>A plain-language overview of common frameworks enterprise teams are asked to align with.</p></div>
         </div>
-        <div class="social-links">
-            <a href="https://linkedin.com/company/aegis-global-holding" title="LinkedIn">in</a>
-            <a href="https://www.google.com/maps/search/Aegis+Global+Holding+Edmond+Oklahoma" title="Location">📍</a>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <div class="foot-grid">
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="index.html#services">Services</a></li>
+            <li><a href="index.html#about">About Us</a></li>
+            <li><a href="security.html">Security</a></li>
+            <li><a href="founder-program.html">Design Partner Program</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="case-studies.html">Case Studies</a></li>
+            <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
+            <li><a href="book-demo.html">Book a Demo</a></li>
+            <li><a href="ai-visibility-check.html">Free AI Scan</a></li>
+            <li><a href="index.html#contact">Contact</a></li>
+          </ul>
         </div>
+        <div>
+          <h4>Products</h4>
+          <ul>
+          <li><a href="aegisos.html">AegisOS</a></li>
+          <li><a href="lexflow.html">LexFlow</a></li>
+          <li><a href="loanserv.html">LoanServ</a></li>
+          <li><a href="medflow.html">MedFlow</a></li>
+          <li><a href="finflow.html">FinFlow</a></li>
+          <li><a href="flowserv.html">FlowServ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Location</h4>
+          <ul>
+            <li>Edmond, Oklahoma</li>
+            <li><a href="mailto:info@aegisglobalholdings.com">info@aegisglobalholdings.com</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms-of-service.html">Terms of Service</a></li>
+          </ul>
+          <h4 style="margin-top:18px;">Certifications</h4>
+          <ul><li>Veteran-Owned Small Business (VOSB)</li></ul>
+        </div>
+      </div>
+      <div class="legal">
         <p>&copy; 2026 Aegis Global Holdings, LLC. All rights reserved.</p>
-        <p>Veteran-owned business | Edmond, Oklahoma</p>
-    </footer>
-
-    <script>
-        // Blog articles with conservative, verifiable content
-        const articles = [
-            {
-                id: 'app-management-best-practices',
-                title: 'Application Management Best Practices',
-                date: 'July 2024',
-                excerpt: 'Effective application management requires a strategic approach that balances performance, security, and cost efficiency.',
-                content: `
-                    <h2>Application Management Best Practices</h2>
-                    <p class="timestamp">Published: July 2024</p>
-                    
-                    <p>Application management encompasses the entire lifecycle of business applications, from deployment to retirement. A thoughtful strategy ensures systems remain reliable, secure, and aligned with business objectives.</p>
-
-                    <div class="highlight-box">
-                        <strong>Key Principle:</strong> Application management success hinges on clear visibility into system health, performance metrics, and user satisfaction.
-                    </div>
-
-                    <h3>Core Elements of Application Management</h3>
-                    <ul>
-                        <li><strong>Lifecycle Governance:</strong> Establishing clear procedures for deployment, updates, and retirement of applications</li>
-                        <li><strong>Performance Monitoring:</strong> Continuous observation of application behavior and user experience</li>
-                        <li><strong>Security Posture:</strong> Implementing controls to protect against vulnerabilities and unauthorized access</li>
-                        <li><strong>Cost Optimization:</strong> Managing infrastructure and licensing expenses efficiently</li>
-                        <li><strong>User Support:</strong> Providing responsive support channels for end-users</li>
-                    </ul>
-
-                    <h3>Establishing a Monitoring Framework</h3>
-                    <p>Effective monitoring provides the foundation for proactive management. Organizations should focus on tracking:</p>
-                    <ul>
-                        <li>Application availability and uptime</li>
-                        <li>Response times and user experience metrics</li>
-                        <li>Resource utilization (CPU, memory, storage)</li>
-                        <li>Error rates and system logs</li>
-                        <li>Security events and access patterns</li>
-                    </ul>
-
-                    <h3>Integration with Business Strategy</h3>
-                    <p>The most successful application management programs align IT operations with business goals. This means understanding how each application supports critical business processes and prioritizing accordingly.</p>
-
-                    <div class="highlight-box">
-                        <strong>Best Practice:</strong> Conduct regular reviews of application inventory with business stakeholders to ensure investments remain aligned with priorities.
-                    </div>
-
-                    <h3>Future Considerations</h3>
-                    <p>As technology continues to evolve, organizations should consider how application management strategies adapt to emerging architectures such as cloud-native applications, containerized workloads, and distributed systems. The fundamental principles of visibility, reliability, and alignment remain constant.</p>
-                `
-            },
-            {
-                id: 'data-integration-challenges',
-                title: 'Common Data Integration Challenges',
-                date: 'June 2024',
-                excerpt: 'Data silos, inconsistent formats, and poor governance create obstacles to effective business intelligence.',
-                content: `
-                    <h2>Common Data Integration Challenges</h2>
-                    <p class="timestamp">Published: June 2024</p>
-                    
-                    <p>Data integration is a critical function in modern organizations, yet it remains one of the most challenging technical initiatives. Many businesses struggle with fragmented data landscapes that hinder decision-making and operational efficiency.</p>
-
-                    <h3>The Data Silo Problem</h3>
-                    <p>Organizations often accumulate applications and databases over time without coordinated architecture. This creates "data silos"—isolated collections of information that don't communicate with each other.</p>
-                    
-                    <div class="highlight-box">
-                        <strong>Impact:</strong> Data silos lead to inconsistent information across departments, duplicated effort in reporting, and delayed decision-making when answers require data from multiple sources.
-                    </div>
-
-                    <h3>Common Data Format Issues</h3>
-                    <p>Different systems use different standards for representing data:</p>
-                    <ul>
-                        <li>Date formats vary (MM/DD/YYYY vs YYYY-MM-DD)</li>
-                        <li>Currency and numeric precision differ</li>
-                        <li>Text encoding and character sets vary</li>
-                        <li>Master data definitions are inconsistent</li>
-                    </ul>
-
-                    <p>Without careful transformation and validation, these differences introduce errors and require manual correction.</p>
-
-                    <h3>Data Governance and Quality</h3>
-                    <p>Successful data integration requires clear governance: who owns data, how is quality measured, who can access what information, and how are changes managed?</p>
-                    
-                    <p>Organizations without formal data governance struggle with:</p>
-                    <ul>
-                        <li>Conflicting information from different departments</li>
-                        <li>Uncertainty about data accuracy and timeliness</li>
-                        <li>Difficulty auditing who accessed sensitive information</li>
-                        <li>Challenges maintaining regulatory compliance</li>
-                    </ul>
-
-                    <h3>Addressing Integration Challenges</h3>
-                    <p>A successful data integration program typically involves:</p>
-                    <ul>
-                        <li><strong>Assessment:</strong> Documenting existing systems, data formats, and flow patterns</li>
-                        <li><strong>Architecture:</strong> Designing a scalable approach that accommodates current and anticipated future needs</li>
-                        <li><strong>Implementation:</strong> Building connectors, transformation rules, and validation logic</li>
-                        <li><strong>Governance:</strong> Establishing policies and procedures for data management</li>
-                        <li><strong>Monitoring:</strong> Observing integration health and data quality metrics</li>
-                    </ul>
-
-                    <p>Each organization's path to resolving integration challenges is unique and depends on their specific architecture, business processes, and constraints.</p>
-                `
-            },
-            {
-                id: 'web-design-strategy',
-                title: 'Web Design Strategy for Enterprise',
-                date: 'May 2024',
-                excerpt: 'Effective web design balances aesthetics with usability, performance, and business objectives.',
-                content: `
-                    <h2>Web Design Strategy for Enterprise</h2>
-                    <p class="timestamp">Published: May 2024</p>
-                    
-                    <p>Enterprise web design differs significantly from consumer-facing websites. The audience is often technical decision-makers, and the primary objective is usually lead generation or information delivery rather than e-commerce conversion.</p>
-
-                    <h3>Understanding Enterprise Audience</h3>
-                    <p>Enterprise website visitors typically include:</p>
-                    <ul>
-                        <li>C-level executives evaluating vendor capabilities</li>
-                        <li>IT directors assessing technical solutions</li>
-                        <li>Procurement professionals gathering RFP information</li>
-                        <li>Technical practitioners researching implementations</li>
-                    </ul>
-
-                    <p>Each group has different needs and varying levels of technical knowledge. Effective design serves all audiences without overwhelming them.</p>
-
-                    <div class="highlight-box">
-                        <strong>Design Principle:</strong> Enterprise websites should be clear, professional, and organized—helping visitors quickly find relevant information without unnecessary distraction.
-                    </div>
-
-                    <h3>Key Design Elements</h3>
-                    <ul>
-                        <li><strong>Clear Navigation:</strong> Logical information hierarchy that reflects how visitors think about solutions</li>
-                        <li><strong>Professional Aesthetics:</strong> Design that conveys stability and credibility</li>
-                        <li><strong>Fast Performance:</strong> Pages that load quickly, especially for international audiences</li>
-                        <li><strong>Mobile Responsiveness:</strong> Full functionality on smartphones and tablets</li>
-                        <li><strong>Accessibility:</strong> WCAG compliance ensures usability for all visitors</li>
-                        <li><strong>Clear Calls-to-Action:</strong> Obvious paths to engagement (proposals, contact forms, resources)</li>
-                    </ul>
-
-                    <h3>Content Strategy</h3>
-                    <p>Enterprise website content should include:</p>
-                    <ul>
-                        <li>Service/product descriptions that address business problems</li>
-                        <li>Case studies showing real-world results</li>
-                        <li>Technical documentation for practitioners</li>
-                        <li>Company background and team information</li>
-                        <li>Clear contact options and response expectations</li>
-                    </ul>
-
-                    <h3>Measuring Success</h3>
-                    <p>Enterprise web design success metrics typically include:</p>
-                    <ul>
-                        <li>Lead quantity and quality from website contact forms</li>
-                        <li>Time-to-contact for interested prospects</li>
-                        <li>Page load performance metrics</li>
-                        <li>Search visibility for relevant keywords</li>
-                        <li>User engagement patterns (scroll depth, time on page)</li>
-                    </ul>
-
-                    <p>Regular analysis of these metrics helps refine design and content to better serve business objectives.</p>
-                `
-            },
-            {
-                id: 'digital-transformation-roadmap',
-                title: 'Building a Digital Transformation Roadmap',
-                date: 'April 2024',
-                excerpt: 'Strategic planning helps organizations navigate the complexity of modernizing business operations.',
-                content: `
-                    <h2>Building a Digital Transformation Roadmap</h2>
-                    <p class="timestamp">Published: April 2024</p>
-                    
-                    <p>Digital transformation is not a destination but an ongoing journey. Organizations that successfully modernize typically do so with a clear roadmap that aligns technology initiatives with business objectives.</p>
-
-                    <h3>Defining Transformation Goals</h3>
-                    <p>Before technical work begins, organizations should articulate what success looks like:</p>
-                    <ul>
-                        <li>Improved operational efficiency</li>
-                        <li>Better customer experience</li>
-                        <li>Faster time-to-market for offerings</li>
-                        <li>Enhanced data-driven decision-making</li>
-                        <li>Reduced risk and improved compliance</li>
-                    </ul>
-
-                    <p>Different organizations prioritize these differently based on competitive pressures and strategic focus.</p>
-
-                    <h3>Assessment Phase</h3>
-                    <p>A thorough assessment includes:</p>
-                    <ul>
-                        <li><strong>Technical Inventory:</strong> Documentation of existing systems, age, and capabilities</li>
-                        <li><strong>Business Process Mapping:</strong> Understanding how work actually flows, not how documentation says it flows</li>
-                        <li><strong>Capability Gaps:</strong> Identifying where technology falls short of business needs</li>
-                        <li><strong>Skills and Culture:</strong> Evaluating organizational readiness for change</li>
-                        <li><strong>Financial Constraints:</strong> Understanding budget realities and funding options</li>
-                    </ul>
-
-                    <div class="highlight-box">
-                        <strong>Insight:</strong> Many digital transformation efforts fail not due to technology limitations, but due to insufficient attention to organizational culture and change management.
-                    </div>
-
-                    <h3>Roadmap Development</h3>
-                    <p>An effective roadmap typically includes:</p>
-                    <ul>
-                        <li><strong>Phases:</strong> Breaking transformation into manageable stages over time</li>
-                        <li><strong>Quick Wins:</strong> Early initiatives that demonstrate value and build momentum</li>
-                        <li><strong>Dependencies:</strong> Clear understanding of which initiatives must precede others</li>
-                        <li><strong>Resource Allocation:</strong> Budget and staffing plans for each phase</li>
-                        <li><strong>Success Metrics:</strong> How progress will be measured</li>
-                        <li><strong>Risk Mitigation:</strong> Plans for addressing anticipated challenges</li>
-                    </ul>
-
-                    <h3>Implementation Considerations</h3>
-                    <p>As roadmaps are executed, flexibility is essential. Business conditions change, technology options evolve, and lessons learned during early phases should inform later decisions.</p>
-
-                    <p>Regular communication with stakeholders about progress, challenges, and adjustments keeps leadership aligned and maintains support for the transformation journey.</p>
-                `
-            },
-            {
-                id: 'cloud-readiness',
-                title: 'Assessing Cloud Readiness',
-                date: 'March 2024',
-                excerpt: 'Moving to cloud requires thoughtful evaluation of applications, data, and organizational factors.',
-                content: `
-                    <h2>Assessing Cloud Readiness</h2>
-                    <p class="timestamp">Published: March 2024</p>
-                    
-                    <p>The shift to cloud computing represents one of the most significant technology transitions in modern business. However, not all applications and organizations are equally suited for cloud environments. A careful readiness assessment is the first step toward a successful cloud journey.</p>
-
-                    <h3>Application Assessment</h3>
-                    <p>Different applications have different cloud compatibility profiles:</p>
-                    <ul>
-                        <li><strong>Cloud-Native Ready:</strong> Modern applications designed for cloud architectures</li>
-                        <li><strong>Moderate Lift:</strong> Applications requiring some refactoring to benefit from cloud capabilities</li>
-                        <li><strong>Heavy Lift:</strong> Legacy applications with significant dependencies on on-premises infrastructure</li>
-                        <li><strong>Not Suitable:</strong> Applications with requirements that cloud cannot currently meet</li>
-                    </ul>
-
-                    <p>Categorizing applications helps prioritize migration efforts and set realistic expectations.</p>
-
-                    <h3>Technical Considerations</h3>
-                    <p>Technical readiness assessment should address:</p>
-                    <ul>
-                        <li>Data sensitivity and compliance requirements (PII, HIPAA, PCI-DSS)</li>
-                        <li>Network dependencies and bandwidth requirements</li>
-                        <li>Integration with systems that must remain on-premises</li>
-                        <li>Scalability requirements and performance expectations</li>
-                        <li>Disaster recovery and business continuity needs</li>
-                    </ul>
-
-                    <div class="highlight-box">
-                        <strong>Key Factor:</strong> Data governance is often the most challenging aspect of cloud readiness. Understanding where data lives, who can access it, and how it's protected is essential.
-                    </div>
-
-                    <h3>Organizational Readiness</h3>
-                    <p>Beyond technology, organizations should evaluate:</p>
-                    <ul>
-                        <li>Staff skills and training needs</li>
-                        <li>Processes for managing cloud resources</li>
-                        <li>Budget and cost management practices</li>
-                        <li>Security and compliance governance</li>
-                        <li>Vendor management and SLA expectations</li>
-                    </ul>
-
-                    <h3>Pilot Programs</h3>
-                    <p>Many organizations find it valuable to conduct a pilot or proof-of-concept before committing to broader cloud migration. Pilots help:</p>
-                    <ul>
-                        <li>Validate assumptions about cloud benefits and costs</li>
-                        <li>Build organizational experience with cloud platforms</li>
-                        <li>Identify unexpected technical or process challenges</li>
-                        <li>Develop confidence among stakeholders in cloud strategy</li>
-                    </ul>
-
-                    <p>Successful cloud adoption is a journey, not a single event. Taking time to assess readiness thoroughly pays dividends in smoother migrations and better long-term outcomes.</p>
-                `
-            },
-            {
-                id: 'security-frameworks',
-                title: 'Understanding IT Security Frameworks',
-                date: 'February 2024',
-                excerpt: 'Industry frameworks provide guidance for building comprehensive security programs.',
-                content: `
-                    <h2>Understanding IT Security Frameworks</h2>
-                    <p class="timestamp">Published: February 2024</p>
-                    
-                    <p>Organizations of all sizes face the challenge of building effective security programs. Numerous industry frameworks exist to provide guidance, each with different focuses and applicability depending on organizational context.</p>
-
-                    <h3>Common Security Frameworks</h3>
-                    <ul>
-                        <li><strong>NIST Cybersecurity Framework:</strong> Comprehensive guidance for managing cyber risk, widely used across U.S. government and critical infrastructure</li>
-                        <li><strong>ISO/IEC 27001:</strong> International standard for information security management systems</li>
-                        <li><strong>CIS Controls:</strong> Prioritized security practices that address the most common attack patterns</li>
-                        <li><strong>COBIT:</strong> IT governance framework that addresses broader IT management and control</li>
-                        <li><strong>SOC 2:</strong> Trust service criteria for service organizations managing customer data</li>
-                    </ul>
-
-                    <p>Each framework takes a slightly different approach, but they generally share common themes around governance, risk management, and continuous improvement.</p>
-
-                    <h3>Core Security Functions</h3>
-                    <p>Most security frameworks address several core functions:</p>
-                    <ul>
-                        <li><strong>Governance:</strong> Establishing policy, accountability, and oversight</li>
-                        <li><strong>Identification:</strong> Understanding assets, systems, and risks</li>
-                        <li><strong>Protection:</strong> Implementing controls to prevent unauthorized access and damage</li>
-                        <li><strong>Detection:</strong> Monitoring for suspicious activity and security events</li>
-                        <li><strong>Response:</strong> Procedures for addressing security incidents</li>
-                        <li><strong>Recovery:</strong> Restoration of systems after incidents</li>
-                    </ul>
-
-                    <div class="highlight-box">
-                        <strong>Fundamental Principle:</strong> Security is not a checklist of controls, but a continuous process of identifying risks, implementing mitigations, and learning from incidents.
-                    </div>
-
-                    <h3>Implementing a Framework</h3>
-                    <p>Organizations typically start by:</p>
-                    <ul>
-                        <li>Selecting a framework appropriate to their industry and context</li>
-                        <li>Assessing current state against framework guidance</li>
-                        <li>Identifying gaps and prioritizing improvements</li>
-                        <li>Allocating resources and building implementation plans</li>
-                        <li>Establishing metrics and monitoring progress</li>
-                    </ul>
-
-                    <h3>Beyond Frameworks</h3>
-                    <p>While frameworks provide valuable structure, security effectiveness ultimately depends on:</p>
-                    <ul>
-                        <li>Strong leadership commitment and funding</li>
-                        <li>Security awareness and training across the organization</li>
-                        <li>Regular testing and validation of controls</li>
-                        <li>Incident response capabilities and procedures</li>
-                        <li>Continuous adaptation to evolving threats</li>
-                    </ul>
-
-                    <p>Frameworks provide the roadmap; organizational commitment determines whether that roadmap leads to meaningful security improvements.</p>
-                `
-            }
-        ];
-
-        // Utility function to get URL parameter
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
-
-        // Load articles
-        function loadArticles() {
-            const articleId = getUrlParameter('id');
-            const articlesGrid = document.getElementById('articlesGrid');
-
-            if (articleId) {
-                // Single article view
-                const article = articles.find(a => a.id === articleId);
-                if (article) {
-                    articlesGrid.innerHTML = `
-                        <a href="/blog.html" class="back-link">← Back to Blog</a>
-                        <div class="article-full">
-                            ${article.content}
-                        </div>
-                    `;
-                    document.title = `${article.title} - Aegis Global Holdings Blog`;
-                } else {
-                    articlesGrid.innerHTML = '<p>Article not found.</p>';
-                }
-            } else {
-                // Blog list view
-                articlesGrid.innerHTML = articles.map(article => `
-                    <a href="/blog.html?id=${article.id}" class="article-card">
-                        <div class="article-card-header">
-                            <h3>${article.title}</h3>
-                        </div>
-                        <div class="article-card-body">
-                            <div class="article-meta">${article.date}</div>
-                            <p class="article-excerpt">${article.excerpt}</p>
-                            <span class="article-link">Read More →</span>
-                        </div>
-                    </a>
-                `).join('');
-            }
-        }
-
-        // Load articles when page loads
-        document.addEventListener('DOMContentLoaded', loadArticles);
-    </script>
-
-    <script
-      src="https://site-chatbot-assets.pages.dev/widget.js"
-      data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
-      data-site="aegis"
-      data-name="Aegis Global Holding"
-      data-accent="#0F1B2E"
-      data-greeting="Hi, I'm here to help point you to the right person at Aegis. What can I help you with today?"
-    ></script>
+      </div>
+    </div>
+  </footer>
+  <script
+  src="https://site-chatbot-assets.pages.dev/widget.js"
+  data-backend="https://site-chatbots.robert-bb6.workers.dev"
+  data-site="aegis"
+  async
+  defer></script>
 </body>
 </html>
