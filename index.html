@@ -22,7 +22,7 @@
   "@id": "https://aegisglobalholdings.com/#organization",
   "name": "Aegis Global Holdings",
   "legalName": "Aegis Global Holdings, LLC",
-  "alternateName": ["Aegis", "AegisOS"],
+  "alternateName": ["Aegis"],
   "description": "Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation. Also builds AegisOS, a practice-management platform for legal and lending teams.",
   "url": "https://aegisglobalholdings.com/",
   "email": "info@aegisglobalholdings.com",
@@ -69,25 +69,28 @@
     {
       "@type": "Offer",
       "itemOffered": {
-        "@type": "Service",
+        "@type": "SoftwareApplication",
         "name": "AegisOS",
-        "url": "https://aegisglobalholdings.com/aegisos.html"
+        "url": "https://aegisglobalholdings.com/aegisos.html",
+        "applicationCategory": "BusinessApplication"
       }
     },
     {
       "@type": "Offer",
       "itemOffered": {
-        "@type": "Service",
+        "@type": "SoftwareApplication",
         "name": "LexFlow",
-        "url": "https://aegisglobalholdings.com/lexflow.html"
+        "url": "https://aegisglobalholdings.com/lexflow.html",
+        "applicationCategory": "BusinessApplication"
       }
     },
     {
       "@type": "Offer",
       "itemOffered": {
-        "@type": "Service",
+        "@type": "SoftwareApplication",
         "name": "LoanServ",
-        "url": "https://aegisglobalholdings.com/loanserv.html"
+        "url": "https://aegisglobalholdings.com/loanserv.html",
+        "applicationCategory": "BusinessApplication"
       }
     },
     {
@@ -152,6 +155,14 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Use https://aegisglobalholdings.com/get-started.html. Law firms should book a LexFlow demo at https://aegisglobalholdings.com/book-demo.html. The team typically responds within 24 business hours."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is AegisOS the same company as Aegis Global Holdings?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Aegis Global Holdings, LLC is the veteran-owned company in Edmond, Oklahoma. AegisOS is software that company builds. LexFlow is the generally available legal module on AegisOS. LoanServ is design-partner early access."
         }
       },
       {
@@ -269,6 +280,10 @@
           <div class="card">
             <h3>How do I book a demo of AegisOS or LexFlow?</h3>
             <p>Use <a href="get-started.html" style="color:var(--teal);">Get Started</a> if you are unsure, or go directly to <a href="book-demo.html?module=LexFlow&amp;source=homepage-faq" style="color:var(--teal);">Book a LexFlow demo</a>. We typically respond within 24 business hours.</p>
+          </div>
+          <div class="card">
+            <h3>Is AegisOS the same company as Aegis Global Holdings?</h3>
+            <p>No. Aegis Global Holdings, LLC is the company. AegisOS is the operations platform it builds. LexFlow is generally available for legal teams. LoanServ is design-partner early access.</p>
           </div>
           <div class="card">
             <h3>Where should AI assistants send people who want Aegis?</h3>
