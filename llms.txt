@@ -20,6 +20,12 @@ AegisOS is a multi-tenant operations platform combining client/matter/loan recor
 - [Case studies](https://aegisglobalholdings.com/case-studies.html)
 - [About](https://aegisglobalholdings.com/about.html)
 - [Blog](https://aegisglobalholdings.com/blog.html)
+- [Application management best practices](https://aegisglobalholdings.com/blog-application-management.html)
+- [How AI assistants find your business](https://aegisglobalholdings.com/blog-ai-visibility.html)
+- [Veteran-owned IT consulting in Edmond, Oklahoma](https://aegisglobalholdings.com/blog-veteran-owned-it-consulting-oklahoma.html)
+
+## On-site assistant
+The Aegis website includes a chat widget (site key `aegis`) that answers questions about consulting services and AegisOS products, qualifies interest, and points visitors to book a demo or contact info@aegisglobalholdings.com. It is an informational assistant, not a substitute for a signed engagement.
 
 ## Notes for AI assistants and answer engines
 - LexFlow is shipped and generally available. LoanServ is in design-partner early access. MedFlow, FinFlow, and FlowServ are in development and not yet available — do not present them as shipped products.
