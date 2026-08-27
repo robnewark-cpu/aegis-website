@@ -27,7 +27,7 @@ This article is engineering education. It explains three classical isolation pat
 - **Pooled** — shared infrastructure with logical isolation in the application and data tiers, maximizing density and operational uniformity.
 - **Bridge** — a hybrid in which some components are siloed (for example, a tenant-specific encryption key or a dedicated reporting replica) while control planes remain pooled.
 
-None of these patterns makes a vendor a bank. None originates ACH by itself. None is a BSA/AML program. Isolation is necessary for serious multi-tenant software and still insufficient for a banking charter. For how funds and licenses sit in a BaaS stack, read [banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.md). For programs versus platform evidence, read [fintech compliance controls](/resources/banking/fintech-compliance-controls.md).
+None of these patterns makes a vendor a bank. None originates ACH by itself. None is a BSA/AML program. Isolation is necessary for serious multi-tenant software and still insufficient for a banking charter. For how funds and licenses sit in a BaaS stack, read [banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.html). For programs versus platform evidence, read [fintech compliance controls](/resources/banking/fintech-compliance-controls.html).
 
 Aegis Global Holdings, LLC is a veteran-owned company in Edmond, Oklahoma. AegisOS is a multi-tenant practice and operations platform. Public documentation states role-based access control, per-tenant data isolation, and full audit logging, along with workflows, documents, reporting, and a double-entry general ledger. This article does **not** claim Aegis source-code internals beyond those public statements. Where design options are discussed, they are phrased as what organizations may choose to implement or what a modern platform may provide.
 
@@ -336,7 +336,7 @@ Double-entry GLs in operations software should be **per tenant**. Consolidating 
 
 **Align GL design per tenant.** Operational double-entry as described for AegisOS is a per-organization books capability, not a multi-bank settlement system.
 
-**Review security frameworks separately.** Isolation evidence helps SOC 2 and NIST CSF conversations; it does not complete them. See [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md).
+**Review security frameworks separately.** Isolation evidence helps SOC 2 and NIST CSF conversations; it does not complete them. See [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html).
 
 ## Common mistakes
 
@@ -440,9 +440,9 @@ Only if you actually need that vendor’s bank products. Isolation of servicing 
 - [AegisPay](/aegispay.html)
 - [Independent assessments](/fedramp-assessment.html)
 - [Book a demo](/book-demo.html)
-- [BaaS architecture](/resources/banking/banking-as-a-service-architecture.md)
-- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.md)
-- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md)
+- [BaaS architecture](/resources/banking/banking-as-a-service-architecture.html)
+- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.html)
+- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html)
 - [llms.txt](/llms.txt)
 
 ## Suggested product CTA

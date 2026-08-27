@@ -78,7 +78,7 @@ Aegis Global Holdings, LLC, a veteran-owned company in Edmond, Oklahoma, publish
 
 **Attestation versus authorization.** SOC 2 is an attestation over a description of controls for a period. ISO 27001 certifies an ISMS. FedRAMP is a U.S. federal authorization path. AegisOS is not FedRAMP authorized. Do not treat any of these as a banking charter.
 
-**Subledger evidence.** Journal entries, invoice states, and servicing events in an operations platform that support the company’s own books. They do not replace bank books. See [banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.md).
+**Subledger evidence.** Journal entries, invoice states, and servicing events in an operations platform that support the company’s own books. They do not replace bank books. See [banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.html).
 
 ## Terminology used in this article
 
@@ -107,7 +107,7 @@ That machinery is usually grouped as follows. Grouping is pedagogical, not a sta
 
 **4. Privacy and safeguards (GLBA as a category, plus other privacy law that may apply).** Notices, use and disclosure discipline, vendor contracts, and technical safeguards for information the entity actually holds. Scope is legal. A practice-management database of invoices is not automatically a bank customer-information system, and a bank core is not a CRM.
 
-**5. Information-security controls.** Identity, access, logging, encryption, vulnerability management, incident response, business continuity—organized using NIST CSF functions (Identify, Protect, Detect, Respond, Recover) or an ISMS (ISO 27001) or trust-services categories (SOC 2). The [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md) article compares those umbrellas.
+**5. Information-security controls.** Identity, access, logging, encryption, vulnerability management, incident response, business continuity—organized using NIST CSF functions (Identify, Protect, Detect, Respond, Recover) or an ISMS (ISO 27001) or trust-services categories (SOC 2). The [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html) article compares those umbrellas.
 
 **6. Technology-risk themes banks recognize.** The FFIEC IT handbook series, as a category, is how many U.S. banking organizations talk about IT audit, information security, business continuity, and related topics. Fintechs that partner with banks should expect questionnaires in that dialect. That is not the same as Aegis inventing handbook procedures.
 
@@ -129,7 +129,7 @@ A control that cannot be described as a calendar is not implemented. The followi
 
 **When a vendor is added.** Data-flow update, contract clauses, least-privilege integration, and an owner. Fintechs accumulate processors, KYC vendors, cloud hosts, support tools, and AI features. Each is a control scope change.
 
-**When a customer leaves or a partner is terminated.** Access removal, data-return or deletion per contract, and evidence that tenant boundaries held during the offboarding. Isolation design is covered in [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md).
+**When a customer leaves or a partner is terminated.** Access removal, data-return or deletion per contract, and evidence that tenant boundaries held during the offboarding. Isolation design is covered in [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html).
 
 Where does AegisOS fit in that calendar? A modern platform may provide the **system of record for operational actions**: who viewed a matter, who changed a role, who posted an operational journal, who exported a report. Public AegisOS materials describe RBAC, per-tenant isolation, and audit logging as foundational. Organizations may choose to implement their BSA/AML or GLBA programs with entirely separate case-management and screening vendors. Do not assume AegisOS performs screening, files reports, or originates payments. It does not currently process ACH and does not hold funds.
 
@@ -390,9 +390,9 @@ Use `Article` with publisher Organization `Aegis Global Holdings, LLC` and canon
 - [AegisPay](/aegispay.html)
 - [FedRAMP-style independent assessments](/fedramp-assessment.html) (advisory only)
 - [Book a demo](/book-demo.html)
-- [Banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.md)
-- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md)
-- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md)
+- [Banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.html)
+- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html)
+- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html)
 - [Services](/services.html) for consulting, [llms.txt](/llms.txt) for machine-readable limits
 
 ## Suggested product CTA

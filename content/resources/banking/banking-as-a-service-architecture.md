@@ -70,7 +70,7 @@ Aegis Global Holdings, LLC is a veteran-owned technology firm in Edmond, Oklahom
 
 **Control plane versus data plane.** The control plane decides who may do what (identity, roles, product eligibility, limits as designed by the program). The data plane records and moves transactions. Confusing the two produces systems that look complete in a demo and fail in reconciliation.
 
-**Isolation boundary.** The technical and contractual perimeter that keeps one partner’s customers, ledgers, and secrets from mixing with another’s. Isolation is an architecture choice; see the companion article on [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md).
+**Isolation boundary.** The technical and contractual perimeter that keeps one partner’s customers, ledgers, and secrets from mixing with another’s. Isolation is an architecture choice; see the companion article on [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html).
 
 ## Terminology used in this article
 
@@ -130,7 +130,7 @@ APIs are cheap to screenshot. Layers are expensive to unwind.
 
 **Failure domains differ by layer.** A bank can be healthy while a program manager’s ledger is irreconcilable. A processor can be up while the fintech’s workflow tool is down. An operations platform can be fully available while no payment moves—and that can be the correct outcome if the platform was never on the rail.
 
-**Evidence lives in different systems.** BSA/AML programs, GLBA safeguards, and information-security programs (see [fintech compliance controls](/resources/banking/fintech-compliance-controls.md) and [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md)) expect definable owners. If “the API vendor” is treated as the BSA officer, the program is mis-designed.
+**Evidence lives in different systems.** BSA/AML programs, GLBA safeguards, and information-security programs (see [fintech compliance controls](/resources/banking/fintech-compliance-controls.html) and [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html)) expect definable owners. If “the API vendor” is treated as the BSA officer, the program is mis-designed.
 
 **Customer communication must match the contract.** Telling a user “your money is in our app” when funds sit at a bank under a specific structure is how trust collapses. Architecture should drive copy, not the reverse.
 
@@ -194,7 +194,7 @@ Use this sequence in architecture reviews, vendor diligence, and internal design
 
 **Step 4 — Separate instructions from settlement.** Catalog events that are intents, authorizations, submissions, posts, returns, and adjustments. Require a state machine. “Success” in a UI is not a state.
 
-**Step 5 — Map compliance owners.** For BSA/AML as a category, GLBA safeguards as a category, OFAC screening as a category, and information security (SOC 2, ISO 27001, NIST CSF, and FFIEC IT handbook series as categories), write the accountable company. Software does not hold those programs by itself. See the companion piece on [fintech compliance controls](/resources/banking/fintech-compliance-controls.md).
+**Step 5 — Map compliance owners.** For BSA/AML as a category, GLBA safeguards as a category, OFAC screening as a category, and information security (SOC 2, ISO 27001, NIST CSF, and FFIEC IT handbook series as categories), write the accountable company. Software does not hold those programs by itself. See the companion piece on [fintech compliance controls](/resources/banking/fintech-compliance-controls.html).
 
 **Step 6 — Test identity join keys.** Confirm that customer identifiers in the app, the bank, and the processor can be reconciled without heroic spreadsheets. Confirm employee RBAC inside tools cannot cross tenants.
 
@@ -234,7 +234,7 @@ BaaS and BaaS-adjacent stacks concentrate a set of well-known risks. Naming them
 
 **Compliance theater.** Screening checkboxes in software without a BSA/AML program, or encryption claims without an information-security program, fail when a real review arrives. Controls are operating models, not icons.
 
-**Confused identity.** Duplicate customers, shared logins across tenants, or support staff with global god-mode access turn a multi-tenant platform into a data incident. Isolation patterns are discussed in [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md).
+**Confused identity.** Duplicate customers, shared logins across tenants, or support staff with global god-mode access turn a multi-tenant platform into a data incident. Isolation patterns are discussed in [multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html).
 
 **Rail complexity treated as a feature flag.** ACH returns, unauthorized claims, and settlement windows are operational disciplines. Toggling “payments on” in a backlog is not a rail program.
 
@@ -302,7 +302,7 @@ Several industry directions will keep BaaS architecture relevant even as vendors
 
 **AI in the control plane, not the ledger.** Assistants will summarize exceptions and draft customer explanations. They should not be allowed to invent postings. See the next section.
 
-**Framework convergence in questionnaires.** SOC 2, ISO 27001, and NIST CSF language will continue to dominate vendor review, with FFIEC IT handbook themes appearing in bank-partner reviews. Mapping, not logo collection, will distinguish serious programs. That is the subject of [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md).
+**Framework convergence in questionnaires.** SOC 2, ISO 27001, and NIST CSF language will continue to dominate vendor review, with FFIEC IT handbook themes appearing in bank-partner reviews. Mapping, not logo collection, will distinguish serious programs. That is the subject of [digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html).
 
 **Honest labeling as a market advantage.** Vendors who say “we are not a bank” will waste fewer enterprise cycles. Aegis is in that camp.
 
@@ -370,9 +370,9 @@ Publish this page as `Article` (and optionally `TechArticle`) with `headline` ma
 - [AegisPay](/aegispay.html) — billing, invoicing, and trust-accounting foundation.
 - [Independent assessment services](/fedramp-assessment.html) — advisory reviews; not an authorization.
 - [Book a demo](/book-demo.html) — security conversation and product walkthrough.
-- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.md)
-- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md)
-- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.md)
+- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.html)
+- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html)
+- [Digital banking security frameworks](/resources/banking/digital-banking-security-frameworks.html)
 - [About Aegis](/about.html) and [llms.txt](/llms.txt) for machine-readable facts.
 
 ## Suggested product CTA

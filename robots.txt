@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /thank-you.html
 
 # Explicit allow for answer-engine and AI crawlers (same policy as *).
 User-agent: GPTBot
@@ -49,3 +50,4 @@ Allow: /
 
 Sitemap: https://aegisglobalholdings.com/sitemap.xml
 # Machine-readable company facts for AI assistants: https://aegisglobalholdings.com/llms.txt
+# Conversion router for humans and assistants: https://aegisglobalholdings.com/get-started.html

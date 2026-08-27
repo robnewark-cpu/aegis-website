@@ -123,13 +123,10 @@
       <a class="brand" href="../../index.html">AEGIS<span class="accent"></span></a>
       <nav class="main-nav" aria-label="Primary">
         <ul>
-        <li><a href="../../index.html#services">Services</a></li>
-        <li><a href="../../index.html#about">About</a></li>
-        <li><a href="../../blog.html">Blog</a></li>
-        <li><a href="../../resources/index.html" aria-current="page">Knowledge Center</a></li>
-        <li><a href="../../aegisos.html">AegisOS</a></li>
-        <li><a href="../../book-demo.html">Book a Demo</a></li>
-        <li><a href="../../index.html#contact">Contact</a></li>
+          <li><a href="../../index.html#services">Services</a></li>
+          <li><a href="../../resources/index.html" aria-current="page">Knowledge Center</a></li>
+          <li><a href="../../aegisos.html">AegisOS</a></li>
+          <li><a href="../../get-started.html">Get Started</a></li>
         </ul>
       </nav>
       <span class="badge-flag">&#127482;&#127480; Veteran-Owned Business</span>
@@ -157,7 +154,7 @@
 <li><strong>Pooled</strong> — shared infrastructure with logical isolation in the application and data tiers, maximizing density and operational uniformity.</li>
 <li><strong>Bridge</strong> — a hybrid in which some components are siloed (for example, a tenant-specific encryption key or a dedicated reporting replica) while control planes remain pooled.</li>
 </ul>
-<p>None of these patterns makes a vendor a bank. None originates ACH by itself. None is a BSA/AML program. Isolation is necessary for serious multi-tenant software and still insufficient for a banking charter. For how funds and licenses sit in a BaaS stack, read <a href="../../resources/banking/banking-as-a-service-architecture.md">banking-as-a-service architecture</a>. For programs versus platform evidence, read <a href="../../resources/banking/fintech-compliance-controls.md">fintech compliance controls</a>.</p>
+<p>None of these patterns makes a vendor a bank. None originates ACH by itself. None is a BSA/AML program. Isolation is necessary for serious multi-tenant software and still insufficient for a banking charter. For how funds and licenses sit in a BaaS stack, read <a href="../../resources/banking/banking-as-a-service-architecture.html">banking-as-a-service architecture</a>. For programs versus platform evidence, read <a href="../../resources/banking/fintech-compliance-controls.html">fintech compliance controls</a>.</p>
 <p>Aegis Global Holdings, LLC is a veteran-owned company in Edmond, Oklahoma. AegisOS is a multi-tenant practice and operations platform. Public documentation states role-based access control, per-tenant data isolation, and full audit logging, along with workflows, documents, reporting, and a double-entry general ledger. This article does <strong>not</strong> claim Aegis source-code internals beyond those public statements. Where design options are discussed, they are phrased as what organizations may choose to implement or what a modern platform may provide.</p>
 <p>Critical product facts: Aegis is not a bank; AegisOS does not provide banking-as-a-service, does not currently process ACH, and does not hold funds; FinFlow is in development, not available, and does not process payments or hold funds; LoanServ is design-partner early access for borrower, loan, and collections records plus billing, GL, and audit log—not origination, not investor accounting, not ACH. AegisPay is a billing, invoicing, and trust-accounting foundation as publicly described—not a claim of card or ACH rails.</p>
 <p>If you are buying a BaaS program, you need a bank. If you are buying tenant-safe operations software, <a href="../../aegisos.html">AegisOS</a> and a <a href="../../book-demo.html">demo</a> with a security conversation are the correct door.</p>
@@ -503,7 +500,7 @@
 <p><strong>Teach support.</strong> The human process is part of isolation.</p>
 <p><strong>Stay inside product truth.</strong> No ACH, no funds, no BaaS at Aegis. Repeat it in runbooks so staff do not improvise.</p>
 <p><strong>Align GL design per tenant.</strong> Operational double-entry as described for AegisOS is a per-organization books capability, not a multi-bank settlement system.</p>
-<p><strong>Review security frameworks separately.</strong> Isolation evidence helps SOC 2 and NIST CSF conversations; it does not complete them. See <a href="../../resources/banking/digital-banking-security-frameworks.md">digital banking security frameworks</a>.</p>
+<p><strong>Review security frameworks separately.</strong> Isolation evidence helps SOC 2 and NIST CSF conversations; it does not complete them. See <a href="../../resources/banking/digital-banking-security-frameworks.html">digital banking security frameworks</a>.</p>
 <h2 id="common-mistakes">Common mistakes</h2>
 <p><strong><code>tenant_id</code> without middleware enforcement.</strong></p>
 <p><strong>Sequential public IDs</strong> that enable enumeration.</p>
@@ -559,9 +556,9 @@
 <li><a href="../../aegispay.html">AegisPay</a></li>
 <li><a href="../../fedramp-assessment.html">Independent assessments</a></li>
 <li><a href="../../book-demo.html">Book a demo</a></li>
-<li><a href="../../resources/banking/banking-as-a-service-architecture.md">BaaS architecture</a></li>
-<li><a href="../../resources/banking/fintech-compliance-controls.md">Fintech compliance controls</a></li>
-<li><a href="../../resources/banking/digital-banking-security-frameworks.md">Digital banking security frameworks</a></li>
+<li><a href="../../resources/banking/banking-as-a-service-architecture.html">BaaS architecture</a></li>
+<li><a href="../../resources/banking/fintech-compliance-controls.html">Fintech compliance controls</a></li>
+<li><a href="../../resources/banking/digital-banking-security-frameworks.html">Digital banking security frameworks</a></li>
 <li><a href="../../llms.txt">llms.txt</a></li>
 </ul>
 <h2 id="suggested-product-cta">Suggested product CTA</h2>
@@ -569,6 +566,14 @@
 <p>If you need a <strong>multi-tenant operations platform</strong> with publicly described per-tenant data isolation, role-based access control, and audit logging—plus workflows, documents, reporting, and a double-entry general ledger for each organization’s own books—go to <a href="../../aegisos.html">AegisOS</a> and <a href="../../book-demo.html">book a demo</a>. Ask to spend time on a <strong>security conversation</strong>: how tenant context is enforced, how support access is logged, and what is explicitly out of scope (ACH, funds custody, FinFlow availability, FedRAMP). Bring your isolation questions from this article; we will answer them against current product behavior, not against generic patterns.</p>
 <p>Educational engineering article. Not legal, banking, or compliance advice.</p>
           <p class="disclaimer">This article is educational and is not legal, tax, lending, banking, or compliance advice. Confirm current rules with qualified counsel and the relevant regulator or court. Aegis product capabilities should be confirmed against current product pages and a live demonstration.</p>
+          <aside class="convert" id="next-step">
+            <h2>Next step</h2>
+            <p>Aegis is not a bank and does not offer banking-as-a-service. If you need operations software (records, workflows, ledger, audit log), book an AegisOS demo. If you need IT consulting, request a proposal.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="../../book-demo.html?module=AegisOS+%28Platform%29&amp;source=kc-multi-tenant-banking-platforms">Book an AegisOS demo</a>
+              <a class="btn btn-outline" href="../../get-started.html">Get started</a>
+            </div>
+          </aside>
         </article>
       </div>
     </section>
@@ -583,8 +588,8 @@
             <li><a href="../../index.html#services">Services</a></li>
             <li><a href="../../security.html">Security</a></li>
             <li><a href="../../blog.html">Blog</a></li>
+            <li><a href="../../get-started.html">Get Started</a></li>
             <li><a href="../../book-demo.html">Book a Demo</a></li>
-            <li><a href="../../index.html#contact">Contact</a></li>
           </ul>
         </div>
         <div>
@@ -622,7 +627,7 @@
   data-site="aegis"
   data-name="Aegis Global Holdings"
   data-accent="#0F1B2E"
-  data-greeting="Hi, I'm the Aegis assistant. I can answer questions about our services, AegisOS products, or help you book a demo."
+  data-greeting="Hi, I'm the Aegis assistant. For a LexFlow demo, LoanServ demo, consulting proposal, or AI scan, start at Get Started. What do you need?"
   async
   defer></script>
 </body>
