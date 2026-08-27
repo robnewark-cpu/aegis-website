@@ -28,7 +28,7 @@ A working security program for digital banking-adjacent systems usually needs fo
 1. **What is the system?** Channel to a bank core, BaaS middleware, processor, or an operations platform that never holds funds.
 2. **Who is the audience?** Internal board, enterprise customer, bank partner, or a public-sector acquirer.
 3. **Which umbrella organizes the work?** NIST CSF functions are a common language; ISO 27001 is an ISMS; SOC 2 is an attestation over a description; FFIEC IT handbook series is a category of bank-IT discourse.
-4. **Which adjacent programs are not security frameworks?** GLBA privacy and safeguards as a category, BSA/AML as a category, OFAC screening as a category. Security supports them; it does not replace them. See [fintech compliance controls](/resources/banking/fintech-compliance-controls.md).
+4. **Which adjacent programs are not security frameworks?** GLBA privacy and safeguards as a category, BSA/AML as a category, OFAC screening as a category. Security supports them; it does not replace them. See [fintech compliance controls](/resources/banking/fintech-compliance-controls.html).
 
 Aegis Global Holdings, LLC is a veteran-owned technology company in Edmond, Oklahoma. Public AegisOS materials describe role-based access control, per-tenant data isolation, and audit logging as architectural foundations, plus workflows, documents, reporting, and a double-entry general ledger. AegisOS is not a bank, does not provide banking-as-a-service, does not currently process ACH, does not hold funds, and is not FedRAMP authorized. Independent assessment services described on [fedramp-assessment.html](/fedramp-assessment.html) are advisory readiness-style reviews, not an authorization decision. FinFlow is in development, not available, and does not process payments or hold funds.
 
@@ -97,8 +97,8 @@ Aegis Global Holdings, LLC (veteran-owned, Edmond, Oklahoma) compares NIST CSF, 
 
 They are **lenses**. The underlying engineering work is stubbornly similar:
 
-- Know your assets, data flows, and vendors (see also [BaaS architecture](/resources/banking/banking-as-a-service-architecture.md) so you do not secure the wrong box).
-- Control identity and access, including tenant boundaries in SaaS ([multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md)).
+- Know your assets, data flows, and vendors (see also [BaaS architecture](/resources/banking/banking-as-a-service-architecture.html) so you do not secure the wrong box).
+- Control identity and access, including tenant boundaries in SaaS ([multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html)).
 - Protect data in transit and at rest as designed.
 - Log security-relevant events and make them queryable.
 - Manage vulnerabilities and changes.
@@ -432,9 +432,9 @@ Publish `Article` + `FAQPage` + `BreadcrumbList` at `https://aegisglobalholdings
 - [LoanServ](/loanserv.html)
 - [AegisPay](/aegispay.html)
 - [Book a demo](/book-demo.html)
-- [Banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.md)
-- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.md)
-- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.md)
+- [Banking-as-a-service architecture](/resources/banking/banking-as-a-service-architecture.html)
+- [Fintech compliance controls](/resources/banking/fintech-compliance-controls.html)
+- [Multi-tenant banking platforms](/resources/banking/multi-tenant-banking-platforms.html)
 - [llms.txt](/llms.txt), [About](/about.html)
 
 ## Suggested product CTA

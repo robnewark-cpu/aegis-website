@@ -191,7 +191,7 @@
 <p><strong>Customer information / nonpublic personal information.</strong> Terms of art under privacy regimes including GLBA. Whether they apply, and how, is a legal determination. This article does not decide that for any reader.</p>
 <p><strong>Sanctions screening (OFAC as a category).</strong> Checking parties against U.S. sanctions lists as part of a broader sanctions-compliance approach. Screening software is a component, not the program.</p>
 <p><strong>Attestation versus authorization.</strong> SOC 2 is an attestation over a description of controls for a period. ISO 27001 certifies an ISMS. FedRAMP is a U.S. federal authorization path. AegisOS is not FedRAMP authorized. Do not treat any of these as a banking charter.</p>
-<p><strong>Subledger evidence.</strong> Journal entries, invoice states, and servicing events in an operations platform that support the company’s own books. They do not replace bank books. See <a href="../../resources/banking/banking-as-a-service-architecture.md">banking-as-a-service architecture</a>.</p>
+<p><strong>Subledger evidence.</strong> Journal entries, invoice states, and servicing events in an operations platform that support the company’s own books. They do not replace bank books. See <a href="../../resources/banking/banking-as-a-service-architecture.html">banking-as-a-service architecture</a>.</p>
 <h2 id="terminology-used-in-this-article">Terminology used in this article</h2>
 <table>
 <thead>
@@ -242,7 +242,7 @@
 <p><strong>2. Financial-crime controls (BSA/AML as a category).</strong> Risk assessment, customer due diligence design, monitoring design, independent testing as the entity’s advisors specify, training, and designated responsibility. Thresholds, form types, and filing mechanics are <strong>not</strong> listed here because they must come from current law and counsel—not from a marketing site.</p>
 <p><strong>3. Sanctions controls (OFAC screening as a category).</strong> Who is screened, when (onboarding, periodic, transactional—as designed), how matches are adjudicated, how false positives are governed, and how screening vendors are overseen. “We call an API” is not adjudication.</p>
 <p><strong>4. Privacy and safeguards (GLBA as a category, plus other privacy law that may apply).</strong> Notices, use and disclosure discipline, vendor contracts, and technical safeguards for information the entity actually holds. Scope is legal. A practice-management database of invoices is not automatically a bank customer-information system, and a bank core is not a CRM.</p>
-<p><strong>5. Information-security controls.</strong> Identity, access, logging, encryption, vulnerability management, incident response, business continuity—organized using NIST CSF functions (Identify, Protect, Detect, Respond, Recover) or an ISMS (ISO 27001) or trust-services categories (SOC 2). The <a href="../../resources/banking/digital-banking-security-frameworks.md">digital banking security frameworks</a> article compares those umbrellas.</p>
+<p><strong>5. Information-security controls.</strong> Identity, access, logging, encryption, vulnerability management, incident response, business continuity—organized using NIST CSF functions (Identify, Protect, Detect, Respond, Recover) or an ISMS (ISO 27001) or trust-services categories (SOC 2). The <a href="../../resources/banking/digital-banking-security-frameworks.html">digital banking security frameworks</a> article compares those umbrellas.</p>
 <p><strong>6. Technology-risk themes banks recognize.</strong> The FFIEC IT handbook series, as a category, is how many U.S. banking organizations talk about IT audit, information security, business continuity, and related topics. Fintechs that partner with banks should expect questionnaires in that dialect. That is not the same as Aegis inventing handbook procedures.</p>
 <p><strong>7. Product-conduct and complaints.</strong> Unfair treatment, misleading balance displays, and complaint handling sit next to technical controls. Architecture that cannot tell the truth about funds (see the BaaS article) becomes a conduct issue.</p>
 <p><strong>8. Platform operations controls.</strong> For any multi-tenant system: isolation, RBAC, audit logging, change control, and data-retention design. This is the slice an operations vendor can actually discuss with integrity.</p>
@@ -253,7 +253,7 @@
 <p><strong>Monthly or on a stated cadence.</strong> Access recertification for high-risk roles. Patch and vulnerability aging. Policy exceptions still in force. Training completion for new hires. Key vendor service-organization reports requested or reviewed as the vendor-risk program specifies.</p>
 <p><strong>When something breaks.</strong> Incident response: contain, preserve logs, decide notification with counsel, remediate, write what will change. A Slack thread is not a record unless it is exported into the incident system.</p>
 <p><strong>When a vendor is added.</strong> Data-flow update, contract clauses, least-privilege integration, and an owner. Fintechs accumulate processors, KYC vendors, cloud hosts, support tools, and AI features. Each is a control scope change.</p>
-<p><strong>When a customer leaves or a partner is terminated.</strong> Access removal, data-return or deletion per contract, and evidence that tenant boundaries held during the offboarding. Isolation design is covered in <a href="../../resources/banking/multi-tenant-banking-platforms.md">multi-tenant banking platforms</a>.</p>
+<p><strong>When a customer leaves or a partner is terminated.</strong> Access removal, data-return or deletion per contract, and evidence that tenant boundaries held during the offboarding. Isolation design is covered in <a href="../../resources/banking/multi-tenant-banking-platforms.html">multi-tenant banking platforms</a>.</p>
 <p>Where does AegisOS fit in that calendar? A modern platform may provide the <strong>system of record for operational actions</strong>: who viewed a matter, who changed a role, who posted an operational journal, who exported a report. Public AegisOS materials describe RBAC, per-tenant isolation, and audit logging as foundational. Organizations may choose to implement their BSA/AML or GLBA programs with entirely separate case-management and screening vendors. Do not assume AegisOS performs screening, files reports, or originates payments. It does not currently process ACH and does not hold funds.</p>
 <p>LoanServ, in design-partner early access, is described as borrower, loan, and collections records, a billing engine, a general ledger, and an audit log. That can support operational evidence for servicing work. It is not origination, not investor accounting, not ACH, and not a BSA program.</p>
 <p>AegisPay is described as billing, invoicing, and a trust-accounting foundation. Trust-accounting discipline in professional firms is a real control environment; it is still not a bank and not a card or ACH rail claim.</p>
@@ -500,9 +500,9 @@
 <li><a href="../../aegispay.html">AegisPay</a></li>
 <li><a href="../../fedramp-assessment.html">FedRAMP-style independent assessments</a> (advisory only)</li>
 <li><a href="../../book-demo.html">Book a demo</a></li>
-<li><a href="../../resources/banking/banking-as-a-service-architecture.md">Banking-as-a-service architecture</a></li>
-<li><a href="../../resources/banking/multi-tenant-banking-platforms.md">Multi-tenant banking platforms</a></li>
-<li><a href="../../resources/banking/digital-banking-security-frameworks.md">Digital banking security frameworks</a></li>
+<li><a href="../../resources/banking/banking-as-a-service-architecture.html">Banking-as-a-service architecture</a></li>
+<li><a href="../../resources/banking/multi-tenant-banking-platforms.html">Multi-tenant banking platforms</a></li>
+<li><a href="../../resources/banking/digital-banking-security-frameworks.html">Digital banking security frameworks</a></li>
 <li><a href="../../services.html">Services</a> for consulting, <a href="../../llms.txt">llms.txt</a> for machine-readable limits</li>
 </ul>
 <h2 id="suggested-product-cta">Suggested product CTA</h2>
@@ -533,8 +533,8 @@
             <li><a href="../../index.html#services">Services</a></li>
             <li><a href="../../security.html">Security</a></li>
             <li><a href="../../blog.html">Blog</a></li>
-            <li><a href="../../book-demo.html">Book a Demo</a></li>
             <li><a href="../../get-started.html">Get Started</a></li>
+            <li><a href="../../book-demo.html">Book a Demo</a></li>
           </ul>
         </div>
         <div>

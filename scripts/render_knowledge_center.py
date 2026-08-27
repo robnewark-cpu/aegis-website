@@ -56,6 +56,8 @@ def rewrite_links(html: str, depth: int) -> str:
             return match.group(0)
         if href.startswith("/"):
             href = href.lstrip("/")
+        if href.endswith(".md"):
+            href = href[:-3] + ".html"
         return f'href="{prefix}{href}"'
 
     return re.sub(r'href="([^"]+)"', repl, html)
