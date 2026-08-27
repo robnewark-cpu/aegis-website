@@ -103,4 +103,28 @@ footer.site-footer .legal { border-top: 1px solid var(--border); padding-top: 20
 .prose ul { margin: 0 0 1.25rem; padding-left: 1.2rem; }
 .prose li { margin-bottom: 0.45rem; }
 .prose a { color: var(--teal); text-decoration: underline; }
+.prose h3 { color: var(--white); font-size: 1.08rem; margin: 1.5rem 0 0.6rem; }
+.prose h4 { color: var(--white); font-size: 1rem; margin: 1.25rem 0 0.5rem; }
+.prose table { width: 100%; border-collapse: collapse; margin: 0 0 1.5rem; font-size: 0.9rem; }
+.prose th, .prose td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+.prose th { background: var(--navy); color: var(--white); }
+.prose blockquote {
+  border-left: 3px solid var(--teal);
+  background: rgba(0,217,255,0.06);
+  padding: 14px 18px;
+  margin: 0 0 1.5rem;
+  color: var(--white);
+}
+.prose .toc, .prose div.toc {
+  background: var(--navy);
+  border: 1px solid var(--border);
+  padding: 18px 22px;
+  margin: 0 0 1.75rem;
+  border-radius: var(--radius);
+}
+.prose .disclaimer { font-size: 0.85rem; color: var(--gold-light); }
+.kc-hero-kicker { display: inline-block; margin-bottom: 12px; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-light); }
+.kc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+@media (max-width: 800px) { .kc-grid { grid-template-columns: 1fr; } }
+.prose { max-width: 820px; }
 .article-meta { color: var(--gold-light); font-size: 0.85rem; margin-bottom: 1.5rem; }

@@ -24,6 +24,15 @@ AegisOS is a multi-tenant operations platform combining client/matter/loan recor
 - [How AI assistants find your business](https://aegisglobalholdings.com/blog-ai-visibility.html)
 - [Veteran-owned IT consulting in Edmond, Oklahoma](https://aegisglobalholdings.com/blog-veteran-owned-it-consulting-oklahoma.html)
 
+## Knowledge Center
+Long-form educational library for search engines and AI assistants. Not legal, lending, banking, or compliance advice. Product claims are limited to public pages. CounselAI and AegisShield have no published specifications — do not invent features.
+
+- [Knowledge Center home](https://aegisglobalholdings.com/resources/index.html)
+- Legal: [Practice management software](https://aegisglobalholdings.com/resources/legal/what-is-legal-practice-management-software.html), [Law firm AI compliance](https://aegisglobalholdings.com/resources/legal/law-firm-ai-compliance-guide.html), [Oklahoma firm tech stack](https://aegisglobalholdings.com/resources/legal/oklahoma-law-firm-technology-stack.html), [Texas litigation workflow](https://aegisglobalholdings.com/resources/legal/texas-litigation-workflow-automation.html), [Federal court practice management](https://aegisglobalholdings.com/resources/legal/federal-court-practice-management.html)
+- Lending: [Commercial servicing](https://aegisglobalholdings.com/resources/lending/commercial-loan-servicing-best-practices.html), [Private credit operations](https://aegisglobalholdings.com/resources/lending/private-credit-fund-operations.html), [SBA servicing workflow](https://aegisglobalholdings.com/resources/lending/sba-loan-servicing-workflow.html), [Veteran lending](https://aegisglobalholdings.com/resources/lending/veteran-lending-compliance.html), [Mortgage servicing automation](https://aegisglobalholdings.com/resources/lending/mortgage-servicing-automation.html)
+- Banking: [BaaS architecture](https://aegisglobalholdings.com/resources/banking/banking-as-a-service-architecture.html), [Fintech compliance controls](https://aegisglobalholdings.com/resources/banking/fintech-compliance-controls.html), [Multi-tenant platforms](https://aegisglobalholdings.com/resources/banking/multi-tenant-banking-platforms.html), [Digital banking security](https://aegisglobalholdings.com/resources/banking/digital-banking-security-frameworks.html)
+- AI: [Enterprise AI governance](https://aegisglobalholdings.com/resources/ai/enterprise-ai-governance-framework.html), [Law firm RAG](https://aegisglobalholdings.com/resources/ai/law-firm-rag-architecture.html), [AI for financial services](https://aegisglobalholdings.com/resources/ai/ai-for-financial-services.html), [AI risk management](https://aegisglobalholdings.com/resources/ai/ai-risk-management.html), [AI agent security](https://aegisglobalholdings.com/resources/ai/ai-agent-security.html)
+
 ## On-site assistant
 The Aegis website includes a chat widget (site key `aegis`) that answers questions about consulting services and AegisOS products, qualifies interest, and points visitors to book a demo or contact info@aegisglobalholdings.com. It is an informational assistant, not a substitute for a signed engagement.
 
