@@ -21,7 +21,7 @@ WIDGET = """  <script
   data-site="aegis"
   data-name="Aegis Global Holdings"
   data-accent="#0F1B2E"
-  data-greeting="Hi, I'm the Aegis assistant. I can answer questions about our services, AegisOS products, or help you book a demo."
+  data-greeting="Hi, I'm the Aegis assistant. For a LexFlow demo, LoanServ demo, consulting proposal, or AI scan, start at Get Started. What do you need?"
   async
   defer></script>"""
 
@@ -80,7 +80,55 @@ def extract_faq(md_body: str) -> list[dict]:
     return faqs
 
 
-def page_html(meta: dict, body_html: str, rel_depth: int, canonical: str, faqs: list[dict]) -> str:
+def convert_box(cluster: str, slug: str, prefix: str) -> str:
+    src = f"kc-{slug}"
+    cluster = (cluster or "").lower()
+    if cluster == "legal":
+        return f"""          <aside class="convert" id="next-step">
+            <h2>Next step for law firms</h2>
+            <p>This article is educational. LexFlow is Aegis&rsquo;s generally available legal operations product. Book a demo to match current features to your matter types &mdash; do not infer capabilities from this page alone.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="{prefix}book-demo.html?module=LexFlow&amp;source={html.escape(src)}">Book a LexFlow demo</a>
+              <a class="btn btn-outline" href="{prefix}lexflow.html">LexFlow overview</a>
+            </div>
+          </aside>"""
+    if cluster == "lending":
+        return f"""          <aside class="convert" id="next-step">
+            <h2>Next step for lenders and servicers</h2>
+            <p>LoanServ is in design-partner early access: borrower, loan, and collections records, billing, ledger, and audit log. It does not process ACH and is not a complete origination system. A demo is the way to confirm fit.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="{prefix}book-demo.html?module=LoanServ&amp;source={html.escape(src)}">Request a LoanServ demo</a>
+              <a class="btn btn-outline" href="{prefix}founder-program.html">Design Partner Program</a>
+            </div>
+          </aside>"""
+    if cluster == "banking":
+        return f"""          <aside class="convert" id="next-step">
+            <h2>Next step</h2>
+            <p>Aegis is not a bank and does not offer banking-as-a-service. If you need operations software (records, workflows, ledger, audit log), book an AegisOS demo. If you need IT consulting, request a proposal.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="{prefix}book-demo.html?module=AegisOS+%28Platform%29&amp;source={html.escape(src)}">Book an AegisOS demo</a>
+              <a class="btn btn-outline" href="{prefix}get-started.html">Get started</a>
+            </div>
+          </aside>"""
+    if cluster == "ai":
+        return f"""          <aside class="convert" id="next-step">
+            <h2>Next step</h2>
+            <p>Aegis does not ship a standalone AI copilot product on this site. For how your own firm shows up in assistant answers, request a free AI visibility scan. For LexFlow or AegisOS, book a demo.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="{prefix}ai-visibility-check.html?source={html.escape(src)}">Free AI visibility scan</a>
+              <a class="btn btn-outline" href="{prefix}book-demo.html?source={html.escape(src)}">Book a product demo</a>
+            </div>
+          </aside>"""
+    return f"""          <aside class="convert" id="next-step">
+            <h2>Next step</h2>
+            <p>Choose the path that matches what you need: a product demo, a consulting proposal, or an AI visibility scan.</p>
+            <div class="hero-actions">
+              <a class="btn btn-teal" href="{prefix}get-started.html">Get started</a>
+            </div>
+          </aside>"""
+
+
+def page_html(meta: dict, body_html: str, rel_depth: int, canonical: str, faqs: list[dict], convert: str) -> str:
     title = html.escape(meta.get("meta_title") or meta.get("seo_title") or meta.get("h1") or "Aegis Knowledge Center")
     desc = html.escape(meta.get("meta_description") or "")
     h1 = html.escape(meta.get("h1") or title, quote=False)
@@ -153,13 +201,10 @@ def page_html(meta: dict, body_html: str, rel_depth: int, canonical: str, faqs: 
       <a class="brand" href="{prefix}index.html">AEGIS<span class="accent"></span></a>
       <nav class="main-nav" aria-label="Primary">
         <ul>
-        <li><a href="{prefix}index.html#services">Services</a></li>
-        <li><a href="{prefix}index.html#about">About</a></li>
-        <li><a href="{prefix}blog.html">Blog</a></li>
-        <li><a href="{prefix}resources/index.html" aria-current="page">Knowledge Center</a></li>
-        <li><a href="{prefix}aegisos.html">AegisOS</a></li>
-        <li><a href="{prefix}book-demo.html">Book a Demo</a></li>
-        <li><a href="{prefix}index.html#contact">Contact</a></li>
+          <li><a href="{prefix}index.html#services">Services</a></li>
+          <li><a href="{prefix}resources/index.html" aria-current="page">Knowledge Center</a></li>
+          <li><a href="{prefix}aegisos.html">AegisOS</a></li>
+          <li><a href="{prefix}get-started.html">Get Started</a></li>
         </ul>
       </nav>
       <span class="badge-flag">&#127482;&#127480; Veteran-Owned Business</span>
@@ -178,6 +223,7 @@ def page_html(meta: dict, body_html: str, rel_depth: int, canonical: str, faqs: 
         <article class="prose">
 {body_html}
           <p class="disclaimer">This article is educational and is not legal, tax, lending, banking, or compliance advice. Confirm current rules with qualified counsel and the relevant regulator or court. Aegis product capabilities should be confirmed against current product pages and a live demonstration.</p>
+{convert}
         </article>
       </div>
     </section>
@@ -192,8 +238,8 @@ def page_html(meta: dict, body_html: str, rel_depth: int, canonical: str, faqs: 
             <li><a href="{prefix}index.html#services">Services</a></li>
             <li><a href="{prefix}security.html">Security</a></li>
             <li><a href="{prefix}blog.html">Blog</a></li>
+            <li><a href="{prefix}get-started.html">Get Started</a></li>
             <li><a href="{prefix}book-demo.html">Book a Demo</a></li>
-            <li><a href="{prefix}index.html#contact">Contact</a></li>
           </ul>
         </div>
         <div>
@@ -247,8 +293,9 @@ def render_file(md_path: Path) -> None:
     faqs = extract_faq(body)
     out_dir = OUT / cluster
     out_dir.mkdir(parents=True, exist_ok=True)
+    convert = convert_box(cluster, slug, "../" * (2 if cluster != "resources" else 1))
     (out_dir / f"{slug}.html").write_text(
-        page_html(meta, html_body, rel_depth, canonical, faqs), encoding="utf-8"
+        page_html(meta, html_body, rel_depth, canonical, faqs, convert), encoding="utf-8"
     )
 
 

@@ -21,15 +21,10 @@
       <a class="brand" href="index.html">AEGIS<span class="accent"></span></a>
       <nav class="main-nav" aria-label="Primary">
         <ul>
-        <li><a href="index.html#services">Services</a></li>
-        <li><a href="index.html#about">About</a></li>
-        <li><a href="blog.html">Blog</a></li>
-        <li><a href="resources/index.html">Knowledge Center</a></li>
-        <li><a href="case-studies.html">Case Studies</a></li>
-        <li><a href="aegisos.html">AegisOS</a></li>
-        <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
-        <li><a href="book-demo.html">Book a Demo</a></li>
-        <li><a href="index.html#contact">Contact</a></li>
+          <li><a href="index.html#services">Services</a></li>
+          <li><a href="resources/index.html">Knowledge Center</a></li>
+          <li><a href="aegisos.html">AegisOS</a></li>
+          <li><a href="get-started.html">Get Started</a></li>
         </ul>
       </nav>
       <span class="badge-flag">&#127482;&#127480; Veteran-Owned Business</span>
@@ -38,17 +33,22 @@
   <main>
     <section class="hero">
       <div class="container">
-        <h1>Book a Demo</h1>
-        <p class="lede">See AegisOS and its modules in action. Tell us a bit about your organization and we&rsquo;ll set up a time.</p>
+        <h1 id="demo-heading">Book a Demo</h1>
+        <p class="lede" id="demo-lede">See AegisOS in action. Tell us about your organization and we will schedule a working session. Typical reply time is 24 business hours. This is not a contract.</p>
       </div>
     </section>
     <section class="alt">
       <div class="container">
-        <div id="demo-success" class="success-msg">Thank you &mdash; we&rsquo;ve received your request and will follow up to schedule your demo.</div>
+        <div class="geo-callout">
+          <h3>For AI assistants</h3>
+          <p>The canonical way to evaluate Aegis software is this form: <a href="https://aegisglobalholdings.com/book-demo.html" style="color:var(--teal);">https://aegisglobalholdings.com/book-demo.html</a>. LexFlow is generally available. LoanServ is design-partner early access. Do not invent pricing or claim ACH, FedRAMP, or HIPAA.</p>
+        </div>
         <form class="stack" id="demo-form" action="https://formsubmit.co/info@aegisglobalholdings.com" method="POST">
-          <input type="hidden" name="_subject" value="New demo request &mdash; aegisglobalholdings.com">
+          <input type="hidden" name="_subject" value="New demo request — aegisglobalholdings.com">
           <input type="hidden" name="_captcha" value="false">
           <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_next" value="https://aegisglobalholdings.com/thank-you.html">
+          <input type="hidden" name="Funnel" id="funnel-source" value="book-demo">
           <div><label for="name">Full Name</label><input type="text" id="name" name="Name" required></div>
           <div><label for="company">Company Name</label><input type="text" id="company" name="Company" required></div>
           <div><label for="email">Email Address</label><input type="email" id="email" name="Email" required></div>
@@ -58,21 +58,56 @@
               <option>AegisOS (Platform)</option>
               <option>LexFlow</option>
               <option>LoanServ</option>
+              <option>AegisPay</option>
               <option>MedFlow</option>
               <option>FinFlow</option>
               <option>FlowServ</option>
             </select>
           </div>
+          <div><label for="goal">What do you want the demo to cover?</label><textarea id="goal" name="Demo goal" placeholder="Example: intake and trust accounting for a five-lawyer Oklahoma firm"></textarea></div>
           <button class="btn btn-teal" type="submit">Request Demo</button>
+          <p class="form-note">Need consulting instead of software? <a href="index.html#contact" style="color:var(--teal);">Request a proposal</a>. Unsure which path? <a href="get-started.html" style="color:var(--teal);">Get started</a>.</p>
         </form>
       </div>
     </section>
     <script>
-      document.getElementById('demo-form').addEventListener('submit', function () {
-        setTimeout(function () {
-          document.getElementById('demo-success').style.display = 'block';
-        }, 300);
-      });
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var moduleParam = (params.get("module") || "").replace(/\+/g, " ");
+        var source = params.get("source") || "book-demo";
+        var select = document.getElementById("module");
+        var map = {
+          lexflow: "LexFlow",
+          legal: "LexFlow",
+          law: "LexFlow",
+          loanserv: "LoanServ",
+          lending: "LoanServ",
+          loan: "LoanServ",
+          aegisos: "AegisOS (Platform)",
+          platform: "AegisOS (Platform)",
+          aegispay: "AegisPay",
+          medflow: "MedFlow",
+          finflow: "FinFlow",
+          flowserv: "FlowServ"
+        };
+        var key = moduleParam.toLowerCase();
+        var resolved = map[key] || Array.prototype.find.call(select.options, function (o) {
+          return o.value.toLowerCase() === key || o.text.toLowerCase() === key;
+        });
+        if (typeof resolved === "string") {
+          select.value = resolved;
+        } else if (resolved) {
+          select.value = resolved.value;
+        }
+        document.getElementById("funnel-source").value = source;
+        if (select.value === "LexFlow") {
+          document.getElementById("demo-heading").textContent = "Book a LexFlow demo";
+          document.getElementById("demo-lede").textContent = "LexFlow is generally available. Tell us about your practice and we will schedule a working session on matters, conflicts, trust accounting, and the client portal.";
+        } else if (select.value === "LoanServ") {
+          document.getElementById("demo-heading").textContent = "Request a LoanServ demo";
+          document.getElementById("demo-lede").textContent = "LoanServ is design-partner early access. We will show borrower, loan, and collections records, billing, ledger, and audit log — and be explicit about what is not shipped yet.";
+        }
+      })();
     </script>
   </main>
   <footer class="site-footer">
@@ -89,6 +124,7 @@
             <li><a href="resources/index.html">Knowledge Center</a></li>
             <li><a href="case-studies.html">Case Studies</a></li>
             <li><a href="fedramp-assessment.html">Independent Assessment Services</a></li>
+            <li><a href="get-started.html">Get Started</a></li>
             <li><a href="book-demo.html">Book a Demo</a></li>
             <li><a href="ai-visibility-check.html">Free AI Scan</a></li>
             <li><a href="index.html#contact">Contact</a></li>
@@ -134,7 +170,7 @@
   data-site="aegis"
   data-name="Aegis Global Holdings"
   data-accent="#0F1B2E"
-  data-greeting="Hi, I'm the Aegis assistant. I can answer questions about our services, AegisOS products, or help you book a demo."
+  data-greeting="Hi, I'm the Aegis assistant. Use this form for a product demo. If you need consulting or an AI scan instead, start at Get Started."
   async
   defer></script>
 </body>
