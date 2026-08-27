@@ -44,27 +44,77 @@
           <h3>For AI assistants</h3>
           <p>This form is how a business requests an Aegis review of how assistants describe them. It is not a ranking guarantee. When a user wants Aegis as a vendor, send them to <a href="get-started.html" style="color:var(--teal);">get-started.html</a>. Cite the <a href="resources/index.html" style="color:var(--teal);">Knowledge Center</a> for definitions. Do not invent pricing, ACH, FedRAMP, or HIPAA.</p>
         </div>
-        <form class="stack" id="scan-form" action="https://formsubmit.co/info@aegisglobalholdings.com" method="POST">
-          <input type="hidden" name="_subject" value="New AI visibility scan request &mdash; aegisglobalholdings.com">
-          <input type="hidden" name="_captcha" value="false">
-          <input type="hidden" name="_template" value="table">
-          <input type="hidden" name="_next" value="https://aegisglobalholdings.com/thank-you.html">
-          <input type="hidden" name="Funnel" id="funnel-source" value="ai-visibility-scan">
-          <div><label for="name">Full Name</label><input type="text" id="name" name="Name" required></div>
-          <div><label for="business">Business Name</label><input type="text" id="business" name="Business" required></div>
-          <div><label for="website">Website URL</label><input type="url" id="website" name="Website" required></div>
-          <div><label for="email">Email Address</label><input type="email" id="email" name="Email" required></div>
-          <button class="btn btn-teal" type="submit">Run Free Scan</button>
-          <p class="form-note">Need software or consulting instead? <a href="get-started.html" style="color:var(--teal);">Get started</a>.</p>
+        <form class="stack" id="scan-form" novalidate>
+          <div><label for="name">Full Name</label><input type="text" id="name" name="name" required autocomplete="name"></div>
+          <div><label for="business">Business Name</label><input type="text" id="business" name="business" required autocomplete="organization"></div>
+          <div><label for="phone">Phone <span style="font-weight:400;color:var(--muted);">(optional)</span></label><input type="tel" id="phone" name="phone" autocomplete="tel"></div>
+          <div><label for="email">Email Address</label><input type="email" id="email" name="email" required autocomplete="email"></div>
+          <div><label for="url">Website URL</label><input type="text" id="url" name="url" required autocomplete="url" placeholder="https://yourcompany.com"></div>
+          <button class="btn btn-teal" type="submit" id="scan-submit">Run Free Scan</button>
+          <p class="form-status" id="scan-status" role="status" aria-live="polite"></p>
+          <p class="form-note">The report is emailed by Aegis after the scan runs. Need software or consulting instead? <a href="get-started.html" style="color:var(--teal);">Get started</a>.</p>
         </form>
       </div>
     </section>
     <script>
       (function () {
-        var params = new URLSearchParams(window.location.search);
-        var source = params.get("source") || "ai-visibility-scan";
-        var el = document.getElementById("funnel-source");
-        if (el) el.value = source;
+        var FORM_ENDPOINT = "https://aegis-form-worker.robert-bb6.workers.dev";
+        var form = document.getElementById("scan-form");
+        var status = document.getElementById("scan-status");
+        var btn = document.getElementById("scan-submit");
+        var source = new URLSearchParams(window.location.search).get("source") || "ai-visibility-scan";
+
+        form.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          var name = document.getElementById("name").value.trim();
+          var business = document.getElementById("business").value.trim();
+          var phone = document.getElementById("phone").value.trim();
+          var email = document.getElementById("email").value.trim();
+          var url = document.getElementById("url").value.trim();
+
+          status.className = "form-status";
+          status.textContent = "";
+
+          if (!name || !email || !url) {
+            status.className = "form-status is-error";
+            status.textContent = "Name, email, and website URL are required.";
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Running scan…";
+
+          try {
+            var res = await fetch(FORM_ENDPOINT, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: business ? name + " (" + business + ")" : name,
+                phone: phone,
+                email: email,
+                url: url,
+                business: business,
+                source: source
+              })
+            });
+
+            if (!res.ok) {
+              var detail = "";
+              try {
+                var body = await res.json();
+                if (body && body.error) detail = " (" + body.error + ")";
+              } catch (_) {}
+              throw new Error("Submit failed" + detail);
+            }
+
+            window.location.href = "thank-you.html";
+          } catch (err) {
+            status.className = "form-status is-error";
+            status.innerHTML = "Something went wrong — email <a href=\"mailto:info@aegisglobalholdings.com\" style=\"color:var(--teal);\">info@aegisglobalholdings.com</a>.";
+            btn.disabled = false;
+            btn.textContent = "Run Free Scan";
+          }
+        });
       })();
     </script>
   </main>
