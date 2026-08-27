@@ -12,20 +12,53 @@
   <meta property="og:url" content="https://aegisglobalholdings.com/">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
   <script type="application/ld+json">
   {
   "@context": "https://schema.org",
-  "@type": "ProfessionalService",
+  "@type": ["ProfessionalService", "Organization"],
+  "@id": "https://aegisglobalholdings.com/#organization",
   "name": "Aegis Global Holdings",
-  "description": "Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation.",
+  "legalName": "Aegis Global Holdings, LLC",
+  "alternateName": ["Aegis", "AegisOS"],
+  "description": "Veteran-owned enterprise technology consulting firm in Edmond, Oklahoma, specializing in application management, data integration, and digital transformation. Also builds AegisOS, a practice-management platform for legal and lending teams.",
   "url": "https://aegisglobalholdings.com/",
+  "email": "info@aegisglobalholdings.com",
+  "slogan": "Enterprise tech solutions built with integrity",
+  "foundingLocation": {
+    "@type": "Place",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Edmond",
+      "addressRegion": "OK",
+      "addressCountry": "US"
+    }
+  },
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Edmond",
     "addressRegion": "OK",
     "addressCountry": "US"
   },
-  "email": "info@aegisglobalholdings.com",
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": 35.6528,
+    "longitude": -97.4781
+  },
+  "areaServed": [
+    { "@type": "Country", "name": "United States" },
+    { "@type": "AdministrativeArea", "name": "Oklahoma" }
+  ],
+  "knowsAbout": [
+    "Application management",
+    "Data integration",
+    "Digital transformation",
+    "Legal practice management software",
+    "Loan servicing software",
+    "AI visibility and generative engine optimization"
+  ],
+  "naics": "541512",
   "makesOffer": [
     {
       "@type": "Offer",
@@ -77,6 +110,46 @@
     }
   ]
 }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What does Aegis Global Holdings do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Aegis Global Holdings is a veteran-owned technology company in Edmond, Oklahoma. It provides enterprise IT consulting (application management, data integration, web design, security, and business intelligence) and builds AegisOS, a practice-management platform. LexFlow is generally available for legal teams; LoanServ is in design-partner early access; MedFlow, FinFlow, and FlowServ are in development."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Where is Aegis Global Holdings located?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Aegis Global Holdings, LLC is headquartered in Edmond, Oklahoma, and serves enterprise clients in the United States and worldwide."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Aegis Global Holdings veteran-owned?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Aegis Global Holdings is a veteran-owned small business (VOSB) led by veterans and based in Edmond, Oklahoma."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I book a demo of AegisOS or LexFlow?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use the Book a Demo page at https://aegisglobalholdings.com/book-demo.html, the contact form on the homepage, or the on-site chat assistant. The team typically responds within 24 business hours."
+        }
+      }
+    ]
+  }
   </script>
 </head>
 <body>
@@ -146,10 +219,35 @@
         <div class="grid-3">          <div class="card"><h3>AegisOS</h3><p>The multi-tenant practice-management platform powering every Aegis vertical.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="aegisos.html">Learn more</a></div>
                     <div class="card"><h3>AegisPay</h3><p>Billing, invoicing, online payments, and trust accounting built into every AegisOS module.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="aegispay.html">Learn more</a></div>
           <div class="card"><h3>LexFlow</h3><p>Case management, client portal, document automation, and e-signature for legal practices.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="lexflow.html">Learn more</a></div>
-          <div class="card"><h3>LoanServ</h3><p>Loan servicing: payment engine, ACH, collections, ledger, and borrower portal for lenders.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="loanserv.html">Learn more</a></div>
-          <div class="card"><h3>MedFlow</h3><p>HIPAA-compliant practice management for doctors, dentists, and senior living centers.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="medflow.html">Learn more</a></div>
+          <div class="card"><h3>LoanServ</h3><p>Lending operations in design-partner early access: borrower and loan records, collections, ledger, and borrower portal. ACH payment processing is on the roadmap, not live yet.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="loanserv.html">Learn more</a></div>
+          <div class="card"><h3>MedFlow</h3><p>Healthcare practice operations module in development. Built with access controls and audit logging in mind; not HIPAA certified and not yet available.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="medflow.html">Learn more</a></div>
           <div class="card"><h3>FinFlow</h3><p>Practice management built for financial advisory and accounting firms.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="finflow.html">Learn more</a></div>
           <div class="card"><h3>FlowServ</h3><p>Field service and general professional-services management on the AegisOS core.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="flowserv.html">Learn more</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container">
+        <h2 class="section-title">Frequently asked questions</h2>
+        <p class="section-sub">Straight answers for search engines, AI assistants, and anyone evaluating Aegis.</p>
+        <div class="grid-2">
+          <div class="card">
+            <h3>What does Aegis Global Holdings do?</h3>
+            <p>Aegis is a veteran-owned technology company in Edmond, Oklahoma. We provide enterprise IT consulting&mdash;application management, data integration, web design, security, and business intelligence&mdash;and we build AegisOS. LexFlow is generally available for legal teams. LoanServ is in design-partner early access. MedFlow, FinFlow, and FlowServ are in development.</p>
+          </div>
+          <div class="card">
+            <h3>Where is Aegis Global Holdings located?</h3>
+            <p>Aegis Global Holdings, LLC is headquartered in Edmond, Oklahoma, and serves enterprise clients in the United States and worldwide.</p>
+          </div>
+          <div class="card">
+            <h3>Is Aegis Global Holdings veteran-owned?</h3>
+            <p>Yes. Aegis is a veteran-owned small business (VOSB). Leadership comes from military service, and we apply that same standard of accountability to client work.</p>
+          </div>
+          <div class="card">
+            <h3>How do I book a demo of AegisOS or LexFlow?</h3>
+            <p>Use the <a href="book-demo.html" style="color:var(--teal);">Book a Demo</a> page, the proposal form below, or the chat assistant on this site. We typically respond within 24 business hours.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -248,8 +346,11 @@
   </footer>
   <script
   src="https://site-chatbot-assets.pages.dev/widget.js"
-  data-backend="https://site-chatbots.robert-bb6.workers.dev"
+  data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
   data-site="aegis"
+  data-name="Aegis Global Holdings"
+  data-accent="#0F1B2E"
+  data-greeting="Hi, I'm the Aegis assistant. I can answer questions about our services, AegisOS products, or help you book a demo."
   async
   defer></script>
 </body>

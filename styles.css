@@ -95,3 +95,12 @@ footer.site-footer .foot-grid { display: grid; grid-template-columns: repeat(4, 
 footer.site-footer h4 { color: var(--white); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 12px; }
 footer.site-footer ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 footer.site-footer .legal { border-top: 1px solid var(--border); padding-top: 20px; color: var(--muted); }
+
+/* Long-form articles */
+.prose { max-width: 720px; color: var(--muted); }
+.prose h2 { color: var(--white); font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+.prose p { margin: 0 0 1rem; }
+.prose ul { margin: 0 0 1.25rem; padding-left: 1.2rem; }
+.prose li { margin-bottom: 0.45rem; }
+.prose a { color: var(--teal); text-decoration: underline; }
+.article-meta { color: var(--gold-light); font-size: 0.85rem; margin-bottom: 1.5rem; }

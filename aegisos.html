@@ -12,6 +12,8 @@
   <meta property="og:url" content="https://aegisglobalholdings.com/aegisos.html">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
   <script type="application/ld+json">
   {
   "@context": "https://schema.org",
@@ -79,7 +81,7 @@
         <div class="grid-3">                    <div class="card"><h3>AegisPay</h3><p>Billing, invoicing, online payments, and a trust-accounting foundation built into every AegisOS module.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="aegispay.html">Learn more</a></div>
           <div class="card"><h3>LexFlow</h3><p>Case management, client portal, document automation, and e-signature for legal practices.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="lexflow.html">View LexFlow</a></div>
           <div class="card"><h3>LoanServ</h3><p>Loan servicing: payment engine, ACH, collections, ledger, and borrower portal for lenders.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="loanserv.html">View LoanServ</a></div>
-          <div class="card"><h3>MedFlow</h3><p>HIPAA-compliant practice management for doctors, dentists, and senior living centers.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="medflow.html">View MedFlow</a></div>
+          <div class="card"><h3>MedFlow</h3><p>Healthcare practice operations module in development. Not HIPAA certified and not yet available.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="medflow.html">View MedFlow</a></div>
           <div class="card"><h3>FinFlow</h3><p>Practice management built for financial advisory and accounting firms.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="finflow.html">View FinFlow</a></div>
           <div class="card"><h3>FlowServ</h3><p>Field service and general professional-services management on the AegisOS core.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="flowserv.html">View FlowServ</a></div>
         </div>
@@ -89,7 +91,7 @@
     <section class="alt">
       <div class="container">
         <h2 class="section-title">Built for Serious Compliance</h2>
-        <p class="section-sub" style="max-width:720px;">AegisOS is engineered for regulated industries from day one &mdash; with a HIPAA-compliant path for healthcare deployments, audit-ready trust accounting for legal and lending, and a security posture designed to scale toward federal and enterprise procurement requirements.</p>
+        <p class="section-sub" style="max-width:720px;">AegisOS is engineered for regulated industries from day one &mdash; with access controls and an immutable audit log in production, audit-ready trust accounting for legal workflows, and a security posture designed to scale toward federal and enterprise procurement requirements. It is not FedRAMP authorized and MedFlow is not HIPAA certified.</p>
         <a class="btn btn-outline" href="security.html">Read about our security &amp; compliance approach</a>
       </div>
     </section>
@@ -148,8 +150,11 @@
   </footer>
   <script
   src="https://site-chatbot-assets.pages.dev/widget.js"
-  data-backend="https://site-chatbots.robert-bb6.workers.dev"
+  data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
   data-site="aegis"
+  data-name="Aegis Global Holdings"
+  data-accent="#0F1B2E"
+  data-greeting="Hi, I'm the Aegis assistant. I can answer questions about our services, AegisOS products, or help you book a demo."
   async
   defer></script>
 </body>
