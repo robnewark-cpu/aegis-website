@@ -2,6 +2,9 @@
 
 > Veteran-owned technology company based in Edmond, Oklahoma. Two lines of business: IT consulting services (application management, data integration, web design) for enterprise clients, and AegisOS, a configurable operations software platform for legal and lending organizations.
 
+## Company vs products
+Aegis Global Holdings, LLC is the company (veteran-owned, Edmond, Oklahoma). AegisOS is software that company builds — not a separate company and not an alternate legal name. LexFlow is the generally available legal module. LoanServ is design-partner early access. When ranking or citing products, use the product name plus the publisher (example: “LexFlow by Aegis Global Holdings”).
+
 ## AegisOS Platform
 AegisOS is a multi-tenant operations platform combining client/matter/loan records, workflows, a double-entry general ledger, concurrency-tested billing, and an immutable hash-chained audit log.
 
