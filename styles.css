@@ -98,6 +98,9 @@ input, select, textarea {
 }
 textarea { min-height: 120px; resize: vertical; }
 .form-note { font-size: 0.78rem; color: var(--muted); }
+.form-status { margin: 0; font-size: 0.9rem; color: var(--muted); min-height: 1.2em; }
+.form-status.is-error { color: #ff8a8a; }
+.form-status.is-ok { color: var(--teal); }
 .success-msg { display: none; background: rgba(0,217,255,0.08); border: 1px solid var(--teal); color: var(--teal); padding: 16px; border-radius: var(--radius); font-weight: 600; margin-bottom: 16px; }
 
 /* Footer */
