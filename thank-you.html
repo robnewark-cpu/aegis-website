@@ -26,9 +26,9 @@
   <main>
     <section class="hero">
       <div class="container">
-        <span class="flag">Received</span>
-        <h1>Thank you. We have your request.</h1>
-        <p class="lede">If you requested an AI visibility scan, the report is emailed separately once the analysis finishes. For demos and proposals, Aegis typically replies within 24 business hours. This is not a signed engagement. If you do not see a reply, write <a href="mailto:info@aegisglobalholdings.com" style="color:var(--teal);">info@aegisglobalholdings.com</a>.</p>
+        <span class="flag" id="thanks-flag">Received</span>
+        <h1 id="thanks-heading">Thank you. We have your request.</h1>
+        <p class="lede" id="thanks-lede">If you requested an AI visibility scan, the report is emailed separately once the analysis finishes. For demos and proposals, Aegis typically replies within 24 business hours. This is not a signed engagement. If you do not see a reply, write <a href="mailto:info@aegisglobalholdings.com" style="color:var(--teal);">info@aegisglobalholdings.com</a>.</p>
         <div class="hero-actions">
           <a class="btn btn-teal" href="resources/index.html">Read the Knowledge Center</a>
           <a class="btn btn-outline" href="index.html">Back to the homepage</a>
@@ -42,6 +42,7 @@
           <div class="card"><h3>Law firms</h3><p>Skim the practice-management guide so the demo can focus on your matter types.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="resources/legal/what-is-legal-practice-management-software.html">Legal guide</a></div>
           <div class="card"><h3>Lenders</h3><p>Commercial servicing notes and the Design Partner path for LoanServ early access.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="resources/lending/commercial-loan-servicing-best-practices.html">Servicing guide</a></div>
           <div class="card"><h3>AI visibility</h3><p>How assistants find or miss a business, and what facts to publish on your own site.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="blog-ai-visibility.html">AI visibility article</a></div>
+          <div class="card"><h3>Published fees</h3><p>The $3,000 website, the $3,000 FedRAMP 20x kickoff, and GEO add-ons.</p><a class="btn btn-outline" style="margin-top:12px; padding:8px 16px; font-size:0.85rem;" href="fees.html">Services &amp; fees</a></div>
         </div>
       </div>
     </section>
@@ -62,5 +63,16 @@
   data-greeting="Thanks for reaching out. I can help you find a Knowledge Center article while you wait for the team."
   async
   defer></script>
+  <script>
+    (function () {
+      if (!/[\?&]paid=/.test(window.location.search)) return;
+      var flag = document.getElementById("thanks-flag");
+      var heading = document.getElementById("thanks-heading");
+      var lede = document.getElementById("thanks-lede");
+      if (flag) flag.textContent = "Paid";
+      if (heading) heading.textContent = "Payment received. We will start from here.";
+      if (lede) lede.innerHTML = "Stripe will email a receipt. Aegis typically follows up within 24 business hours to confirm scope. A payment for a published SKU is not a signed master services agreement for open-ended work. If the job is bigger than the SKU, the rest is a statement of work. Questions: <a href=\"mailto:info@aegisglobalholdings.com\" style=\"color:var(--teal);\">info@aegisglobalholdings.com</a>.";
+    })();
+  </script>
 </body>
 </html>
