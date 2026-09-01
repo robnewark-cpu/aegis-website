@@ -21,15 +21,16 @@
  *   TO_EMAIL    — Robert's inbox
  *
  * Optional Stripe payment-link vars (wrangler.jsonc [vars] or secrets)
- *   STRIPE_LINK_AI_AUDIT       — Payment link for "AI Visibility Audit & Strategy"
- *   STRIPE_LINK_CONTENT_SCHEMA — Payment link for "Content & Schema Rewrite"
- *   STRIPE_LINK_GBP            — Payment link for "Google Business Profile Optimization"
- *   STRIPE_LINK_WEBSITE        — Payment link for "Website Migration & Redesign"
- *   STRIPE_LINK_CITATIONS      — Payment link for "Local Citation Building"
- *   STRIPE_LINK_SCHEMA         — Payment link for "Structured Data Implementation"
- *   STRIPE_BOOKING_LINK        — Fallback CTA when per-service links aren't set
- *   STRIPE_ANNUAL_LINK         — CTA for the "Discuss annual rates" section
- *                                 (falls back to STRIPE_BOOKING_LINK if not set)
+ *   STRIPE_LINK_WEBSITE        — "Website Migration & Redesign" ($3,000)
+ *   STRIPE_LINK_AI_AUDIT       — "AI Visibility Audit & Strategy" ($500)
+ *   STRIPE_LINK_CONTENT_SCHEMA — "Content & Schema Rewrite" ($1,500)
+ *   STRIPE_LINK_GBP            — "Google Business Profile Optimization" ($300)
+ *   STRIPE_LINK_CITATIONS      — "Local Citation Building" ($200)
+ *   STRIPE_LINK_SCHEMA         — "Structured Data Implementation" ($500)
+ *   STRIPE_ANNUAL_LINK         — optional annual/bundle conversation CTA
+ *
+ * Missing or non-buy.stripe.com values become a mailto. Do not fall back to a
+ * different Stripe product. Paste the same URLs into /stripe-skus.js.
  *
  * To update prices, discount %, or service descriptions edit the constants
  * below, then run:  npm run deploy
@@ -54,10 +55,23 @@ const ALLOWED_ORIGINS = new Set([
 /**
  * Service catalog — edit prices, taglines, and Stripe env-var keys here.
  * stripeEnvKey maps to an env var you set in wrangler.jsonc [vars] or as a secret.
- * If the env var is not set the button falls back to STRIPE_BOOKING_LINK,
- * and if that is also absent it falls back to a mailto: contact link.
+ * If the env var is not a buy.stripe.com URL the button is a mailto. There is
+ * no fallback to a different Stripe product.
  */
+function stripePaymentUrl(env, key) {
+  const v = env && env[key];
+  if (typeof v === "string" && /^https:\/\/buy\.stripe\.com\//.test(v.trim())) {
+    return v.trim();
+  }
+  return null;
+}
+
 const SERVICE_CATALOG = {
+  "Website Migration & Redesign": {
+    price:       "$3,000",
+    tagline:     "A marketing site of this class: pages, forms, SEO/GEO basics, launch. Custom apps quoted separately.",
+    stripeEnvKey: "STRIPE_LINK_WEBSITE",
+  },
   "AI Visibility Audit & Strategy": {
     price:       "$500",
     tagline:     "Comprehensive AI search audit + 90-day roadmap delivered in 5 business days.",
@@ -72,11 +86,6 @@ const SERVICE_CATALOG = {
     price:       "$300",
     tagline:     "GBP setup, keyword-rich description, categories, and Q&A optimized for AI.",
     stripeEnvKey: "STRIPE_LINK_GBP",
-  },
-  "Website Migration & Redesign": {
-    price:       "$3,000",
-    tagline:     "Modern, fast, AI-readable website built to surface in AI Overviews and ChatGPT.",
-    stripeEnvKey: "STRIPE_LINK_WEBSITE",
   },
   "Local Citation Building": {
     price:       "$200",
@@ -458,7 +467,7 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
   // Build service card HTML
   function serviceCard(name, isRecommended) {
     const svc    = SERVICE_CATALOG[name];
-    const link   = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK || null;
+    const link   = stripePaymentUrl(env, svc.stripeEnvKey);
     const cta    = link
       ? `<a href="${escHtml(link)}"
            style="display:inline-block;background:${isRecommended ? "#FFB300" : "#f0f0f0"};
@@ -593,7 +602,7 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
               Monthly retainers, bundled packages, and multi-service discounts are available.<br>
               Reply to this e-mail or click below and we'll put together a custom quote.
             </p>
-            <a href="${escHtml(env.STRIPE_ANNUAL_LINK || env.STRIPE_BOOKING_LINK || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}?subject=${encodeURIComponent("Annual Plan — " + label)}`)}"
+            <a href="${escHtml(stripePaymentUrl(env, "STRIPE_ANNUAL_LINK") || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}?subject=${encodeURIComponent("Annual Plan — " + label)}`)}"
                style="display:inline-block;background:#FFB300;color:#1a1300;
                       font-family:sans-serif;font-weight:700;font-size:15px;
                       padding:13px 28px;border-radius:4px;text-decoration:none">
@@ -643,12 +652,12 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
   const serviceLines = [
     ...recommended.map(s => {
       const svc  = SERVICE_CATALOG[s];
-      const link = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK;
+      const link = stripePaymentUrl(env, svc.stripeEnvKey);
       return `★ ${s} — ${svc.price}\n   ${svc.tagline}${link ? `\n   Get started: ${link}` : ""}`;
     }),
     ...addOns.map(s => {
       const svc  = SERVICE_CATALOG[s];
-      const link = env[svc.stripeEnvKey] || env.STRIPE_BOOKING_LINK;
+      const link = stripePaymentUrl(env, svc.stripeEnvKey);
       return `  ${s} — ${svc.price}\n   ${svc.tagline}${link ? `\n   Add this: ${link}` : ""}`;
     }),
   ];
@@ -673,7 +682,7 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
     "──────────────────────────────",
     `ANNUAL PLANS & BUNDLE DISCOUNTS`,
     `Save ${ANNUAL_DISCOUNT_PCT} when you commit annually. Monthly retainers and bundled packages available.`,
-    `Reply to this e-mail or visit: ${env.STRIPE_ANNUAL_LINK || env.STRIPE_BOOKING_LINK || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}`}`,
+    `Reply to this e-mail or visit: ${stripePaymentUrl(env, "STRIPE_ANNUAL_LINK") || `mailto:${env.TO_EMAIL || "info@aegisglobalholdings.com"}`}`,
     "",
     "──────────────────────────────",
     "Veteran-owned. No contracts. No fluff.",

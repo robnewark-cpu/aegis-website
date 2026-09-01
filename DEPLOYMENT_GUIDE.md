@@ -71,38 +71,41 @@ Each service in the client e-mail has its own "Get Started" button linked to a S
 
 1. Go to [dashboard.stripe.com/payment-links](https://dashboard.stripe.com/payment-links)
 2. Click **+ New** for each service
-3. Set the price, name, and description to match the service
-4. Copy the resulting URL (looks like `https://buy.stripe.com/xxxx`)
+3. Product name and amount must match the table **exactly** (one-time USD, quantity locked)
+4. After payment: `https://aegisglobalholdings.com/thank-you.html?paid=1`
+5. Copy the resulting URL (`https://buy.stripe.com/...`)
+6. Paste it into **both** `workers/aegis-form-worker/wrangler.jsonc` **and** `/stripe-skus.js`
 
-| Service | Default price | `wrangler.jsonc` var |
-|---|---|---|
-| AI Visibility Audit & Strategy | $497 | `STRIPE_LINK_AI_AUDIT` |
-| Content & Schema Rewrite | $1,497 | `STRIPE_LINK_CONTENT_SCHEMA` |
-| Google Business Profile Optimization | $297 | `STRIPE_LINK_GBP` |
-| Website Migration & Redesign | $2,997 | `STRIPE_LINK_WEBSITE` |
-| Local Citation Building | $197 | `STRIPE_LINK_CITATIONS` |
-| Structured Data Implementation | $497 | `STRIPE_LINK_SCHEMA` |
+Do **not** reuse older Stripe links named All-in-one Care Plan, AI Search & Content Retainer, or Website Mitigation — Deposit. Those names and amounts do not match this catalog. Empty vars make the site and scan emails say Request / Contact Us instead of charging the wrong product.
 
-**Step 2 — Paste links into `wrangler.jsonc`**
+| # | Product name (exact) | Amount | `wrangler.jsonc` var | `stripe-skus.js` key |
+|---|---|---|---|---|
+| 1 | Website Migration & Redesign | $3,000 | `STRIPE_LINK_WEBSITE` | `website` |
+| 2 | FedRAMP 20x Readiness Kickoff | $3,000 | `STRIPE_LINK_FEDRAMP` | `fedramp` |
+| 3 | Content & Schema Rewrite | $1,500 | `STRIPE_LINK_CONTENT_SCHEMA` | `content` |
+| 4 | AI Visibility Audit & Strategy | $500 | `STRIPE_LINK_AI_AUDIT` | `audit` |
+| 5 | Structured Data Implementation | $500 | `STRIPE_LINK_SCHEMA` | `schema` |
+| 6 | Google Business Profile Optimization | $300 | `STRIPE_LINK_GBP` | `gbp` |
+| 7 | Local Citation Building | $200 | `STRIPE_LINK_CITATIONS` | `citations` |
 
-Open `workers/aegis-form-worker/wrangler.jsonc` and fill in the `[vars]` section:
+FedRAMP 20x is on the public fees page. It is not in the AI-scan email catalog (that catalog is GEO/site work). Still create the Stripe link so `fees.html` can show Pay.
+
+**Step 2 — Paste links into `wrangler.jsonc` and `stripe-skus.js`**
+
 ```jsonc
-"STRIPE_LINK_AI_AUDIT":      "https://buy.stripe.com/xxxx",
+"STRIPE_LINK_WEBSITE": "https://buy.stripe.com/xxxx",
 "STRIPE_LINK_CONTENT_SCHEMA": "https://buy.stripe.com/yyyy",
-// …etc
+// …etc — leave unused vars as ""
 ```
 
-Or set a single `STRIPE_BOOKING_LINK` as a fallback for all services:
-```jsonc
-"STRIPE_BOOKING_LINK": "https://buy.stripe.com/your-general-link"
-```
+There is **no** `STRIPE_BOOKING_LINK` fallback for SKUs. A missing URL becomes a mailto / “Request this” CTA.
 
 **Step 3 — Redeploy**
 ```bash
 npm run deploy
 ```
 
-**To update prices** — edit the `price` field in `SERVICE_CATALOG` at the top of `src/index.js` and redeploy. The Stripe payment link price is set in the Stripe dashboard independently.
+**To update prices** — edit `SERVICE_CATALOG` in `src/index.js`, `stripe-skus.js`, and `fees.html`, then create **new** Stripe Payment Links at the new amounts. The Stripe dashboard price is independent of the website copy.
 
 ---
 
