@@ -154,11 +154,34 @@ footer.site-footer .legal { border-top: 1px solid var(--border); padding-top: 20
 }
 .convert h2 { color: var(--white); font-size: 1.2rem; margin: 0 0 8px; }
 .convert p { color: var(--muted); margin: 0 0 14px; }
-.geo-callout {
+details.geo-callout {
+  border: 1px solid var(--border);
   border-left: 3px solid var(--gold);
-  background: rgba(184,134,11,0.08);
-  padding: 16px 18px;
+  background: rgba(184,134,11,0.05);
+  border-radius: var(--radius);
+  padding: 10px 16px;
   margin: 0 0 1.5rem;
 }
-.geo-callout h3 { color: var(--gold-light); margin: 0 0 8px; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; }
-.geo-callout p { color: var(--muted); margin: 0; font-size: 0.94rem; }
+details.geo-callout[open] { padding-bottom: 16px; }
+details.geo-callout summary {
+  cursor: pointer;
+  color: var(--gold-light);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 0;
+  list-style: none;
+}
+details.geo-callout summary::-webkit-details-marker { display: none; }
+details.geo-callout summary::before { content: "\25b8  "; display: inline-block; transition: transform 0.15s; }
+details.geo-callout[open] summary::before { transform: rotate(90deg); }
+details.geo-callout summary:hover { color: var(--white); }
+details.geo-callout p { color: var(--muted); margin: 10px 0 0; font-size: 0.88rem; }
+
+/* Service cards with feature checklists (services.html) */
+.service-features { list-style: none; margin: 14px 0; padding: 0; }
+.service-features li { padding: 4px 0 4px 22px; position: relative; color: var(--muted); font-size: 0.9rem; }
+.service-features li::before { content: "\2713"; position: absolute; left: 0; color: var(--teal); font-weight: 700; }
+.learn-more { display: inline-block; margin-top: 8px; color: var(--teal); font-weight: 700; font-size: 0.9rem; }
+.learn-more:hover { text-decoration: underline; }
