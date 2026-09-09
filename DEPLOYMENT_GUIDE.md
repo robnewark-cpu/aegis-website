@@ -90,6 +90,10 @@ Do **not** reuse older Stripe links named All-in-one Care Plan, AI Search & Cont
 
 FedRAMP 20x is on the public fees page. It is not in the AI-scan email catalog (that catalog is GEO/site work). Still create the Stripe link so `fees.html` can show Pay.
 
+**Do not create website Payment Links for AegisOS software.** AegisPay, LexFlow, LoanServ, Aegis Communications, InventorOS, and AegisShield are offered as demos (`book-demo.html?module=…`), not as public checkout SKUs. Seat prices are not published. Older Practice Launch ($99) and Professional ($189) Stripe links must stay off this site.
+
+The seven rows above are the only Stripe Payment Links this website needs. Until each URL is pasted, `fees.html` shows **Request this** and scan emails show **Contact Us**.
+
 **Step 2 — Paste links into `wrangler.jsonc` and `stripe-skus.js`**
 
 ```jsonc

@@ -16,6 +16,10 @@
  *
  * Do not reuse the old mismatched links (retainers named alike, "Website
  * Mitigation - Deposit", All-in-one Care Plan as a silent fallback).
+ *
+ * AegisPay, LexFlow, LoanServ, and other AegisOS modules are NOT listed
+ * here. They are demos (book-demo.html?module=AegisPay), not public
+ * checkout SKUs. Do not invent a website Payment Link or seat price.
  */
 window.AEGIS_STRIPE_SKUS = {
   website: {
