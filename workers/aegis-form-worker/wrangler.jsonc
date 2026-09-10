@@ -58,11 +58,11 @@
     // InventorOS Intake Pack — $249 one-time (website checkout; not in scan catalog)
     "STRIPE_LINK_INVENTOR": "",
 
-    // AegisOS Practice Launch — $99 / user / month (quantity = seats)
-    "STRIPE_LINK_PRACTICE": "",
+    // AegisOS - Practice Launch — $99 / user / month (quantity = seats)
+    "STRIPE_LINK_PRACTICE": "https://buy.stripe.com/14AbJ3goIabh2FdcL4ffy09",
 
-    // AegisOS Professional — $189 / user / month (quantity = seats)
-    "STRIPE_LINK_PROFESSIONAL": "",
+    // AegisOS - Professional — $189 / user / month (quantity = seats)
+    "STRIPE_LINK_PROFESSIONAL": "https://buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a",
 
     // Optional annual/bundle conversation — not a published SKU.
     "STRIPE_ANNUAL_LINK": ""

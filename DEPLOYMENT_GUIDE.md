@@ -89,8 +89,8 @@ Do **not** reuse older Stripe links named All-in-one Care Plan, AI Search & Cont
 | 7 | Local Citation Building | $200 | One-time | Locked | `STRIPE_LINK_CITATIONS` | `citations` |
 | 8 | AegisPay Launch Pack | $1,500 | One-time | Locked | `STRIPE_LINK_AEGISPAY` | `aegispay` |
 | 9 | InventorOS Intake Pack | $249 | One-time | Locked | `STRIPE_LINK_INVENTOR` | `inventor` |
-| 10 | AegisOS Practice Launch | $99 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PRACTICE` | `practice` |
-| 11 | AegisOS Professional | $189 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PROFESSIONAL` | `professional` |
+| 10 | AegisOS - Practice Launch | $99 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PRACTICE` | `practice` | **LIVE** `buy.stripe.com/14AbJ3goIabh2FdcL4ffy09` |
+| 11 | AegisOS - Professional | $189 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PROFESSIONAL` | `professional` | **LIVE** `buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a` |
 
 Rows 1–7 are consulting. Rows 8–11 are shipped AegisOS software. Rows 8–11 are **not** in the AI-scan email catalog.
 

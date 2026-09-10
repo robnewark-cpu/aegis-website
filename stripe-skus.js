@@ -105,21 +105,21 @@ window.AEGIS_STRIPE_SKUS = {
   },
   practice: {
     id: "practice",
-    name: "AegisOS Practice Launch",
+    name: "AegisOS - Practice Launch",
     amount: 99,
     display: "$99 / user / mo",
     interval: "month",
     quantityAdjustable: true,
-    url: ""
+    url: "https://buy.stripe.com/14AbJ3goIabh2FdcL4ffy09"
   },
   professional: {
     id: "professional",
-    name: "AegisOS Professional",
+    name: "AegisOS - Professional",
     amount: 189,
     display: "$189 / user / mo",
     interval: "month",
     quantityAdjustable: true,
-    url: ""
+    url: "https://buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a"
   }
 };
 
