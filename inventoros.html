@@ -88,8 +88,8 @@
         <h1>InventorOS</h1>
         <p class="lede">Track invention provenance with auditable human versus AI evidence. InventorOS keeps the project file, the contribution analysis, the timeline, and the package you hand to counsel.</p>
         <div class="hero-actions">
-          <a class="btn btn-teal" href="book-demo.html?module=InventorOS&amp;source=inventoros">Book an InventorOS Demo</a>
-          <a class="btn btn-outline" href="aegisos.html">Back to AegisOS</a>
+          <a class="btn btn-teal" href="fees.html#inventor">$249 Intake Pack</a>
+          <a class="btn btn-outline" href="book-demo.html?module=InventorOS&amp;source=inventoros">Book an InventorOS Demo</a>
         </div>
       </div>
     </section>
@@ -110,12 +110,13 @@
           <div class="card"><h3>IP intake pack</h3><p>A structured intake path and review queue so a human still approves what leaves the tenant.</p></div>
           <div class="card"><h3>On the AegisOS core</h3><p>Same platform identity, RBAC, tenant isolation, and audit log as other AegisOS modules. Confirm access in a demo.</p></div>
         </div>
-        <aside class="convert" id="next-step">
-          <h2>Next step</h2>
-          <p>A working session is how to confirm fit. This page is not a patent specification and not an engagement letter.</p>
-          <div class="hero-actions">
-            <a class="btn btn-teal" href="book-demo.html?module=InventorOS&amp;source=inventoros-convert">Book an InventorOS demo</a>
-            <a class="btn btn-outline" href="lexflow.html">LexFlow for law firms</a>
+        <aside class="convert" id="next-step" data-sku="inventor">
+          <h2>Buy the Intake Pack or book a demo</h2>
+          <p>The published SKU is the <strong>$249 InventorOS Intake Pack</strong>. This is not USPTO filing and not legal advice. A working session is optional if you want to confirm fit first.</p>
+          <div class="sku-cta hero-actions"></div>
+          <div class="hero-actions" style="margin-top:12px;">
+            <a class="btn btn-outline" href="book-demo.html?module=InventorOS&amp;source=inventoros-convert">Book an InventorOS demo</a>
+            <a class="btn btn-outline" href="fees.html#inventor">All published fees</a>
           </div>
         </aside>
       </div>
@@ -183,13 +184,15 @@
       </div>
     </div>
   </footer>
+  <script src="stripe-skus.js"></script>
+  <script>window.aegisMountStripeCtas();</script>
   <script
   src="https://site-chatbot-assets.pages.dev/widget.js"
   data-worker-url="https://site-chatbots.robert-bb6.workers.dev"
   data-site="aegis"
   data-name="Aegis Global Holdings"
   data-accent="#0F1B2E"
-  data-greeting="Hi, I'm the Aegis assistant. For an InventorOS demo, a FedRAMP 20x readiness conversation, LexFlow, LoanServ, or an AI scan, start at Get Started."
+  data-greeting="Hi, I'm the Aegis assistant. InventorOS Intake Pack is $249 on Services & fees. It is not USPTO filing and not legal advice."
   async
   defer></script>
 </body>

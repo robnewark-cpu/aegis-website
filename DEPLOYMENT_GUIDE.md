@@ -71,28 +71,34 @@ Each service in the client e-mail has its own "Get Started" button linked to a S
 
 1. Go to [dashboard.stripe.com/payment-links](https://dashboard.stripe.com/payment-links)
 2. Click **+ New** for each service
-3. Product name and amount must match the table **exactly** (one-time USD, quantity locked)
+3. Product name and amount must match the table **exactly**. One-time SKUs: USD, quantity locked. Monthly seat SKUs: recurring monthly, customers can adjust quantity.
 4. After payment: `https://aegisglobalholdings.com/thank-you.html?paid=1`
 5. Copy the resulting URL (`https://buy.stripe.com/...`)
-6. Paste it into **both** `workers/aegis-form-worker/wrangler.jsonc` **and** `/stripe-skus.js`
+6. Paste consulting URLs into **both** `workers/aegis-form-worker/wrangler.jsonc` **and** `/stripe-skus.js`. Paste software URLs into `/stripe-skus.js` (and the matching wrangler vars if you want them stored there).
 
 Do **not** reuse older Stripe links named All-in-one Care Plan, AI Search & Content Retainer, or Website Mitigation — Deposit. Those names and amounts do not match this catalog. Empty vars make the site and scan emails say Request / Contact Us instead of charging the wrong product.
 
-| # | Product name (exact) | Amount | `wrangler.jsonc` var | `stripe-skus.js` key |
-|---|---|---|---|---|
-| 1 | Website Migration & Redesign | $3,000 | `STRIPE_LINK_WEBSITE` | `website` |
-| 2 | FedRAMP 20x Readiness Kickoff | $3,000 | `STRIPE_LINK_FEDRAMP` | `fedramp` |
-| 3 | Content & Schema Rewrite | $1,500 | `STRIPE_LINK_CONTENT_SCHEMA` | `content` |
-| 4 | AI Visibility Audit & Strategy | $500 | `STRIPE_LINK_AI_AUDIT` | `audit` |
-| 5 | Structured Data Implementation | $500 | `STRIPE_LINK_SCHEMA` | `schema` |
-| 6 | Google Business Profile Optimization | $300 | `STRIPE_LINK_GBP` | `gbp` |
-| 7 | Local Citation Building | $200 | `STRIPE_LINK_CITATIONS` | `citations` |
+| # | Product name (exact) | Amount | Type | Quantity | `wrangler.jsonc` var | `stripe-skus.js` key |
+|---|---|---|---|---|---|---|
+| 1 | Website Migration & Redesign | $3,000 | One-time | Locked | `STRIPE_LINK_WEBSITE` | `website` |
+| 2 | FedRAMP 20x Readiness Kickoff | $3,000 | One-time | Locked | `STRIPE_LINK_FEDRAMP` | `fedramp` |
+| 3 | Content & Schema Rewrite | $1,500 | One-time | Locked | `STRIPE_LINK_CONTENT_SCHEMA` | `content` |
+| 4 | AI Visibility Audit & Strategy | $500 | One-time | Locked | `STRIPE_LINK_AI_AUDIT` | `audit` |
+| 5 | Structured Data Implementation | $500 | One-time | Locked | `STRIPE_LINK_SCHEMA` | `schema` |
+| 6 | Google Business Profile Optimization | $300 | One-time | Locked | `STRIPE_LINK_GBP` | `gbp` |
+| 7 | Local Citation Building | $200 | One-time | Locked | `STRIPE_LINK_CITATIONS` | `citations` |
+| 8 | AegisPay Launch Pack | $1,500 | One-time | Locked | `STRIPE_LINK_AEGISPAY` | `aegispay` |
+| 9 | InventorOS Intake Pack | $249 | One-time | Locked | `STRIPE_LINK_INVENTOR` | `inventor` |
+| 10 | AegisOS Practice Launch | $99 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PRACTICE` | `practice` |
+| 11 | AegisOS Professional | $189 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PROFESSIONAL` | `professional` |
 
-FedRAMP 20x is on the public fees page. It is not in the AI-scan email catalog (that catalog is GEO/site work). Still create the Stripe link so `fees.html` can show Pay.
+Rows 1–7 are consulting. Rows 8–11 are shipped AegisOS software. Rows 8–11 are **not** in the AI-scan email catalog.
 
-**Do not create website Payment Links for AegisOS software.** AegisPay, LexFlow, LoanServ, Aegis Communications, InventorOS, and AegisShield are offered as demos (`book-demo.html?module=…`), not as public checkout SKUs. Seat prices are not published. Older Practice Launch ($99) and Professional ($189) Stripe links must stay off this site.
+**Do not sell on a website Payment Link:** LoanServ (ACH not live — demo), Aegis Communications (metered after demo), AegisShield as an ATO (use the $3,000 kickoff), MedFlow / FinFlow / FlowServ / CounselAI / FinanceAI / HealthAI (not shipped), Enterprise seats (custom).
 
-The seven rows above are the only Stripe Payment Links this website needs. Until each URL is pasted, `fees.html` shows **Request this** and scan emails show **Contact Us**.
+Create **new** links for rows 8–11 even if older Practice Launch / Professional subscription URLs still exist. Product names must match the table exactly.
+
+Until each URL is pasted into `stripe-skus.js`, the site shows **Request this** instead of **Pay** / **Subscribe**.
 
 **Step 2 — Paste links into `wrangler.jsonc` and `stripe-skus.js`**
 
