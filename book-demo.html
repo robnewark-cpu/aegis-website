@@ -61,6 +61,7 @@
               <option>InventorOS</option>
               <option>AegisShield</option>
               <option>AegisPay</option>
+              <option>Aegis Communications</option>
               <option>MedFlow</option>
               <option>FinFlow</option>
               <option>FlowServ</option>
@@ -97,6 +98,12 @@
           aegisos: "AegisOS (Platform)",
           platform: "AegisOS (Platform)",
           aegispay: "AegisPay",
+          pay: "AegisPay",
+          billing: "AegisPay",
+          aegiscommunications: "Aegis Communications",
+          "aegis communications": "Aegis Communications",
+          communications: "Aegis Communications",
+          phone: "Aegis Communications",
           medflow: "MedFlow",
           finflow: "FinFlow",
           flowserv: "FlowServ"
@@ -123,6 +130,12 @@
         } else if (select.value === "AegisShield") {
           document.getElementById("demo-heading").textContent = "Book an AegisShield demo";
           document.getElementById("demo-lede").textContent = "AegisShield shows findings, control scope, remediation, and framework mapping. Listing FedRAMP 20x is not authorization. AegisOS is not FedRAMP authorized.";
+        } else if (select.value === "AegisPay") {
+          document.getElementById("demo-heading").textContent = "Book an AegisPay demo";
+          document.getElementById("demo-lede").textContent = "AegisPay is the billing, invoicing, online payments, and trust-accounting foundation on AegisOS. We will show time, invoices, and payment posting — and be explicit that Aegis does not advertise ACH or hold client funds.";
+        } else if (select.value === "Aegis Communications") {
+          document.getElementById("demo-heading").textContent = "Book an Aegis Communications demo";
+          document.getElementById("demo-lede").textContent = "Aegis Communications is phone, SMS, fax, email, and an office suite inside AegisOS. It is a metered add-on after a demo, not a public checkout SKU. Aegis is not a phone company.";
         } else if (select.value === "FedRAMP 20x Readiness") {
           document.getElementById("demo-heading").textContent = "Request FedRAMP 20x readiness";
           document.getElementById("demo-lede").textContent = "This is advisory readiness work, not an ATO and not a 3PAO assessment. Tell us which cloud offering you want reviewed.";
