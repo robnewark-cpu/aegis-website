@@ -29,7 +29,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$3,000",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/eVq14pb4o5V14Nl7qKffy0b"
   },
   fedramp: {
     id: "fedramp",
@@ -38,7 +38,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$3,000",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/14A3cxa0k8397Zx6mGffy0c"
   },
   content: {
     id: "content",
@@ -47,7 +47,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$1,500",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/9B6cN71tO3MT3Jh8uOffy0d"
   },
   audit: {
     id: "audit",
@@ -56,7 +56,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$500",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/eVq00la0k3MTgw3fXgffy0e"
   },
   schema: {
     id: "schema",
@@ -65,7 +65,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$500",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/9B6fZja0kcjpa7FaCWffy0f"
   },
   gbp: {
     id: "gbp",
@@ -74,7 +74,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$300",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/aFadRb0pK3MT1B97qKffy0g"
   },
   citations: {
     id: "citations",
@@ -83,7 +83,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$200",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/3cI6oJa0k3MTgw3cL4ffy0h"
   },
   aegispay: {
     id: "aegispay",

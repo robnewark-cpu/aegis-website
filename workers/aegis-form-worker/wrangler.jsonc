@@ -32,25 +32,25 @@
     "STRIPE_BOOKING_LINK": "",
 
     // Website Migration & Redesign — $3,000
-    "STRIPE_LINK_WEBSITE": "",
+    "STRIPE_LINK_WEBSITE": "https://buy.stripe.com/eVq14pb4o5V14Nl7qKffy0b",
 
     // FedRAMP 20x Readiness Kickoff — $3,000 (fees page only; not in scan catalog)
-    "STRIPE_LINK_FEDRAMP": "",
+    "STRIPE_LINK_FEDRAMP": "https://buy.stripe.com/14A3cxa0k8397Zx6mGffy0c",
 
     // Content & Schema Rewrite — $1,500
-    "STRIPE_LINK_CONTENT_SCHEMA": "",
+    "STRIPE_LINK_CONTENT_SCHEMA": "https://buy.stripe.com/9B6cN71tO3MT3Jh8uOffy0d",
 
     // AI Visibility Audit & Strategy — $500
-    "STRIPE_LINK_AI_AUDIT": "",
+    "STRIPE_LINK_AI_AUDIT": "https://buy.stripe.com/eVq00la0k3MTgw3fXgffy0e",
 
     // Structured Data Implementation — $500
-    "STRIPE_LINK_SCHEMA": "",
+    "STRIPE_LINK_SCHEMA": "https://buy.stripe.com/9B6fZja0kcjpa7FaCWffy0f",
 
     // Google Business Profile Optimization — $300
-    "STRIPE_LINK_GBP": "",
+    "STRIPE_LINK_GBP": "https://buy.stripe.com/aFadRb0pK3MT1B97qKffy0g",
 
     // Local Citation Building — $200
-    "STRIPE_LINK_CITATIONS": "",
+    "STRIPE_LINK_CITATIONS": "https://buy.stripe.com/3cI6oJa0k3MTgw3cL4ffy0h",
 
     // AegisPay Launch Pack — $1,500 one-time (website checkout; not in scan catalog)
     "STRIPE_LINK_AEGISPAY": "",
