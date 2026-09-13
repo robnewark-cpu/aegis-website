@@ -80,7 +80,9 @@ p.section-sub { color: var(--muted); max-width: 640px; margin: 0 0 36px; }
 .card { background: var(--navy-light); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
 .card h3 { margin: 0 0 10px; font-size: 1.12rem; color: var(--white); }
 .card p { color: var(--muted); font-size: 0.94rem; margin: 0; }
-.card .icon { color: var(--teal); font-size: 1.4rem; margin-bottom: 12px; display: block; }
+.card .icon { color: var(--teal); margin-bottom: 12px; display: block; }
+.card .icon svg { width: 30px; height: 30px; display: block; }
+.badge-flag svg, .flag svg { flex-shrink: 0; }
 
 .stat-row { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 28px; }
 .stat { min-width: 140px; }
