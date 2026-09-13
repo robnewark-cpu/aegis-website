@@ -1,0 +1,38 @@
+{
+  // Wrangler v3 / v4 config for aegis-samgov-bot
+  "name": "aegis-samgov-bot",
+  "main": "src/index.js",
+  "compatibility_date": "2024-09-23",
+
+  // Runs once a day. SAM.gov postings don't move fast enough to justify
+  // hourly polling, and daily keeps well under any rate limit. Change the
+  // cron string below if you want a different cadence.
+  "triggers": {
+    "crons": ["0 13 * * *"] // 13:00 UTC = 8am America/Chicago (7am during DST)
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aegis-opportunities",
+      "database_id": "99fb7093-dfbc-4b52-afdd-7fbf3efbadc0"
+    }
+  ],
+
+  // REQUIRED secrets (set via CLI, never commit values):
+  //   wrangler secret put SAM_API_KEY    --name aegis-samgov-bot
+  //     -> get a free public API key at sam.gov -> Account Details -> Request API Key
+  //   wrangler secret put RESEND_API_KEY --name aegis-samgov-bot
+  "vars": {
+    "FROM_EMAIL": "noreply@aegisglobalholdings.com",
+    "TO_EMAIL":   "info@aegisglobalholdings.com",
+
+    // Comma-separated NAICS codes to search. Edit to change which
+    // opportunities the bot looks for.
+    "NAICS_CODES": "541511,541512,541519,541611,541618,541690",
+
+    // Minimum score (0-100) for an opportunity to be e-mailed. Raise this
+    // if you're getting too many low-relevance notices.
+    "SCORE_THRESHOLD": "40"
+  }
+}
