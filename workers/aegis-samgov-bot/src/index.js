@@ -25,9 +25,14 @@
  * 5.  GET /respond?id=...&token=...&action=approve|decline|save updates
  *     that item's status in D1
  *
- * This bot does NOT do anything after approval yet (no proposal drafting,
- * no compliance matrix, no outreach) — intentional v1 scope cut. Approving
- * just marks status in D1 for you to act on manually.
+ * Phase 2A: approving a sam_gov item also has Claude draft a requirements
+ * checklist from the full solicitation text (re-fetched fresh from SAM.gov
+ * by noticeid — D1 only stores a 500-char excerpt) and e-mails it, clearly
+ * labeled as an unverified AI-drafted first pass, never authoritative. The
+ * prompt is strictly grounded: only report what's literally in the text,
+ * never infer a plausible-sounding requirement. Other sources (usaspending/
+ * adzuna/usajobs prospects) still do nothing beyond the D1 status update on
+ * approve — that's Phase 2B, not built yet.
  *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
  *   SAM_API_KEY      — free key from sam.gov -> Account Details -> Request API Key
@@ -38,6 +43,9 @@
  *   USAJOBS_EMAIL    — the email registered with that key; USAJOBS requires
  *                      it as the User-Agent header on every request, not
  *                      just the key
+ *   ANTHROPIC_API_KEY — for the Phase 2A requirements-checklist draft.
+ *                      Approve still works without it (falls back to just
+ *                      the D1 status update) — checked at call time.
  *
  * IMPORTANT: Cloudflare Workers cannot reach api.usaspending.gov directly —
  * every request (even a bare GET /) fails with a 525 TLS handshake error
@@ -53,6 +61,7 @@
 
 const SAM_API = "https://api.sam.gov/opportunities/v2/search";
 const RESEND_API = "https://api.resend.com/emails";
+const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const WORKER_URL = "https://aegis-samgov-bot.robert-bb6.workers.dev";
 
 // Fixed, auditable scoring rules. Every match here is a literal substring
@@ -94,7 +103,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/respond") {
-      return handleRespond(env, url);
+      return handleRespond(env, url, ctx);
     }
 
     // Manual trigger for testing without waiting for the cron.
@@ -526,7 +535,7 @@ function scoreItem(item) {
 
 // ── Approve / decline / save ────────────────────────────────────────────────
 
-async function handleRespond(env, url) {
+async function handleRespond(env, url, ctx) {
   const id = url.searchParams.get("id");
   const token = url.searchParams.get("token");
   const action = url.searchParams.get("action");
@@ -535,7 +544,7 @@ async function handleRespond(env, url) {
     return htmlResponse("Invalid request.", 400);
   }
 
-  const row = await env.DB.prepare("SELECT respond_token, title FROM opportunities WHERE notice_id = ?")
+  const row = await env.DB.prepare("SELECT respond_token, title, source FROM opportunities WHERE notice_id = ?")
     .bind(id)
     .first();
 
@@ -548,7 +557,133 @@ async function handleRespond(env, url) {
     .bind(status, id)
     .run();
 
-  return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${status}</strong>.`, 200);
+  let extra = "";
+  if (action === "approve" && row.source === "sam_gov" && env.ANTHROPIC_API_KEY) {
+    ctx.waitUntil(
+      draftSamGovChecklist(env, id, row.title).catch((err) =>
+        console.error("[aegis-samgov-bot] Checklist draft failed:", err.message),
+      ),
+    );
+    extra = " Drafting a requirements checklist now — check your e-mail in about a minute.";
+  }
+
+  return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${status}</strong>.${extra}`, 200);
+}
+
+// ── Phase 2A: AI-drafted requirements checklist on Approve (sam_gov only) ──
+//
+// Fetches the full solicitation text fresh from SAM.gov (D1 only stores a
+// 500-char excerpt) and has Claude extract a checklist. Strictly grounded —
+// the prompt forbids inferring anything not literally in the text — and the
+// e-mail is labeled as an unverified first pass, not authoritative.
+
+async function draftSamGovChecklist(env, noticeId, title) {
+  const params = new URLSearchParams({ api_key: env.SAM_API_KEY, noticeid: noticeId, limit: "1" });
+  const res = await fetch(`${SAM_API}?${params}`);
+  if (!res.ok) throw new Error(`SAM.gov lookup ${res.status}`);
+  const data = await res.json();
+  const opp = data.opportunitiesData?.[0];
+  if (!opp) throw new Error("Notice not found on re-fetch");
+
+  const description = await fetchDescription(env, opp.description);
+  const resourceLinks = Array.isArray(opp.resourceLinks) ? opp.resourceLinks : [];
+
+  const checklist = await callAnthropicForChecklist(env, { title, description, opp });
+
+  await sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, checklist });
+}
+
+async function callAnthropicForChecklist(env, { title, description, opp }) {
+  const userContent = [
+    `Solicitation title: ${title}`,
+    `Notice type: ${opp.type || "unknown"}`,
+    `NAICS: ${opp.naicsCode || "unknown"}`,
+    `Set-aside: ${opp.typeOfSetAside || "none stated"}`,
+    `Response deadline (as recorded by SAM.gov): ${opp.responseDeadLine || "not stated"}`,
+    "",
+    "Full solicitation text:",
+    description || "(no description text available)",
+  ].join("\n");
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-5",
+      max_tokens: 2048,
+      system: CHECKLIST_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userContent }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const raw = data.content?.[0]?.text ?? "";
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return { parseError: true, raw };
+  }
+}
+
+const CHECKLIST_SYSTEM_PROMPT = `\
+You are extracting a requirements checklist from a U.S. federal government solicitation for a veteran-owned small business considering whether to bid.
+
+STRICT GROUNDING RULE: only report facts literally present in the provided text. Never infer, guess, or fill in a plausible-sounding requirement that is not explicitly stated. If something is not mentioned, say so — do not omit the field or invent an answer.
+
+Respond with ONLY a raw JSON object, no markdown fences, no preamble:
+{
+  "summary": "2-3 sentence plain-English summary of what is being solicited, using only what the text states",
+  "deadline": "the response deadline as stated in the text, or \\"not stated in solicitation text\\"",
+  "keyRequirements": ["specific requirement 1 as stated", "specific requirement 2 as stated"],
+  "certificationsOrClearances": ["any required certification, clearance, or set-aside status literally mentioned, or empty array if none mentioned"],
+  "openQuestions": ["anything a bidder would need to clarify because the text is ambiguous or silent on it"]
+}`;
+
+async function sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, checklist }) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+  const samUrl = opp.uiLink || `https://sam.gov/workspace/contract/opp/${noticeId}/view`;
+
+  const bodyHtml = checklist.parseError
+    ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
+       <pre style="white-space:pre-wrap;font-size:13px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(checklist.raw)}</pre>`
+    : `
+      <p><strong>Summary:</strong> ${escHtml(checklist.summary || "")}</p>
+      <p><strong>Deadline:</strong> ${escHtml(checklist.deadline || "not stated")}</p>
+      <p><strong>Key requirements:</strong></p>
+      <ul>${(checklist.keyRequirements || []).map((r) => `<li>${escHtml(r)}</li>`).join("") || "<li>None extracted</li>"}</ul>
+      <p><strong>Certifications / clearances mentioned:</strong></p>
+      <ul>${(checklist.certificationsOrClearances || []).map((r) => `<li>${escHtml(r)}</li>`).join("") || "<li>None mentioned</li>"}</ul>
+      <p><strong>Open questions to clarify:</strong></p>
+      <ul>${(checklist.openQuestions || []).map((r) => `<li>${escHtml(r)}</li>`).join("") || "<li>None</li>"}</ul>`;
+
+  const linksHtml = resourceLinks.length
+    ? `<p><strong>Attachments:</strong></p><ul>${resourceLinks.map((l) => `<li><a href="${escHtml(l)}">${escHtml(l)}</a></li>`).join("")}</ul>`
+    : "";
+
+  await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `Requirements checklist (AI draft) — ${title}`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
+        ⚠ AI-drafted from the solicitation text. Not authoritative — verify every item against the actual document before relying on it.
+      </p>
+      <h2>${escHtml(title)}</h2>
+      <p><a href="${escHtml(samUrl)}">View on SAM.gov</a></p>
+      ${bodyHtml}
+      ${linksHtml}
+    </div>`,
+    text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}`,
+  });
 }
 
 // ── E-mail ──────────────────────────────────────────────────────────────────
