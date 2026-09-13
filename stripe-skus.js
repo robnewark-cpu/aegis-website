@@ -92,7 +92,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$1,500",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/eVq00l6O83MT1B926qffy0i"
   },
   inventor: {
     id: "inventor",
@@ -101,7 +101,7 @@ window.AEGIS_STRIPE_SKUS = {
     display: "$249",
     interval: null,
     quantityAdjustable: false,
-    url: ""
+    url: "https://buy.stripe.com/14A4gB3BW5V1cfNfXgffy0j"
   },
   practice: {
     id: "practice",

@@ -53,10 +53,10 @@
     "STRIPE_LINK_CITATIONS": "https://buy.stripe.com/3cI6oJa0k3MTgw3cL4ffy0h",
 
     // AegisPay Launch Pack — $1,500 one-time (website checkout; not in scan catalog)
-    "STRIPE_LINK_AEGISPAY": "",
+    "STRIPE_LINK_AEGISPAY": "https://buy.stripe.com/eVq00l6O83MT1B926qffy0i",
 
     // InventorOS Intake Pack — $249 one-time (website checkout; not in scan catalog)
-    "STRIPE_LINK_INVENTOR": "",
+    "STRIPE_LINK_INVENTOR": "https://buy.stripe.com/14A4gB3BW5V1cfNfXgffy0j",
 
     // AegisOS - Practice Launch — $99 / user / month (quantity = seats)
     "STRIPE_LINK_PRACTICE": "https://buy.stripe.com/14AbJ3goIabh2FdcL4ffy09",
