@@ -8,7 +8,7 @@
  * navigating away right after submit.
  */
 (function () {
-  var GA_ID = "G-9Y9R724BNK";
+  var GA_ID = "G-GBECJ0TWCF";
 
   var s = document.createElement("script");
   s.async = true;
