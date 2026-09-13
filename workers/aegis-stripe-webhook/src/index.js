@@ -51,6 +51,10 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
+    }
+
     if (request.method === "GET" && url.pathname === "/health") {
       return jsonResponse({
         ok: Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET && env.RESEND_API_KEY),

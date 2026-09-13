@@ -107,8 +107,20 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
+    }
+
+    // GET only renders a confirmation page -- no side effect. Crawlers,
+    // e-mail safe-link scanners (Outlook/Google prefetch every link in an
+    // e-mail to check for malware), and any bot that ignores robots.txt
+    // could otherwise silently trigger an approve/decline before a human
+    // ever clicks. Only a real button click (POST) commits the action.
     if (request.method === "GET" && url.pathname === "/respond") {
-      return handleRespond(env, url, ctx);
+      return renderRespondConfirmation(env, url);
+    }
+    if (request.method === "POST" && url.pathname === "/respond") {
+      return handleRespond(env, request, ctx);
     }
 
     // Manual trigger for testing without waiting for the cron.
@@ -540,15 +552,9 @@ function scoreItem(item) {
 
 // ── Approve / decline / save ────────────────────────────────────────────────
 
-async function handleRespond(env, url, ctx) {
-  const id = url.searchParams.get("id");
-  const token = url.searchParams.get("token");
-  const action = url.searchParams.get("action");
+const RESPOND_ACTIONS = ["approve", "decline", "save"];
 
-  if (!id || !token || !["approve", "decline", "save"].includes(action)) {
-    return htmlResponse("Invalid request.", 400);
-  }
-
+async function loadRespondRow(env, id, token) {
   const row = await env.DB
     .prepare(
       `SELECT respond_token, title, source, agency, description_excerpt, award_amount,
@@ -557,10 +563,51 @@ async function handleRespond(env, url, ctx) {
     )
     .bind(id)
     .first();
+  if (!row || row.respond_token !== token) return null;
+  return row;
+}
 
-  if (!row || row.respond_token !== token) {
-    return htmlResponse("Invalid or expired link.", 403);
+// GET: read-only. Renders a confirmation page with a real <form method="post">
+// button -- no DB write happens here, so a prefetching bot or scanner can
+// safely fetch this URL with no effect.
+async function renderRespondConfirmation(env, url) {
+  const id = url.searchParams.get("id");
+  const token = url.searchParams.get("token");
+  const action = url.searchParams.get("action");
+
+  if (!id || !token || !RESPOND_ACTIONS.includes(action)) {
+    return htmlResponse("Invalid request.", 400);
   }
+  const row = await loadRespondRow(env, id, token);
+  if (!row) return htmlResponse("Invalid or expired link.", 403);
+
+  const verb = action === "approve" ? "Approve" : action === "decline" ? "Decline" : "Save for later";
+  return htmlResponse(
+    `<h2>${verb}?</h2>
+     <p>"${escHtml(row.title)}"</p>
+     <form method="post" action="/respond">
+       <input type="hidden" name="id" value="${escHtml(id)}">
+       <input type="hidden" name="token" value="${escHtml(token)}">
+       <input type="hidden" name="action" value="${escHtml(action)}">
+       <button type="submit" style="background:#0E141B;color:#fff;padding:10px 20px;border:none;border-radius:4px;font-size:15px;cursor:pointer">Confirm: ${verb}</button>
+     </form>`,
+    200,
+  );
+}
+
+// POST: the only path that actually mutates state, and only in response to
+// a real form submission (a button click), never a bare GET fetch.
+async function handleRespond(env, request, ctx) {
+  const form = await request.formData().catch(() => null);
+  const id = form?.get("id");
+  const token = form?.get("token");
+  const action = form?.get("action");
+
+  if (!id || !token || !RESPOND_ACTIONS.includes(action)) {
+    return htmlResponse("Invalid request.", 400);
+  }
+  const row = await loadRespondRow(env, id, token);
+  if (!row) return htmlResponse("Invalid or expired link.", 403);
 
   const status = action === "approve" ? "approved" : action === "decline" ? "declined" : "saved";
   await env.DB.prepare("UPDATE opportunities SET status = ?, updated_at = datetime('now') WHERE notice_id = ?")

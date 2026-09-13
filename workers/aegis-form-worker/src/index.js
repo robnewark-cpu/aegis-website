@@ -133,6 +133,10 @@ export default {
     const origin = request.headers.get("Origin") || "";
     const url = new URL(request.url);
 
+    if (request.method === "GET" && url.pathname === "/robots.txt") {
+      return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
+    }
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
