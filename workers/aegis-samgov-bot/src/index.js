@@ -614,7 +614,11 @@ async function callAnthropicForChecklist(env, { title, description, opp }) {
     },
     body: JSON.stringify({
       model: "claude-opus-5",
-      max_tokens: 2048,
+      // 2048 was too low: Opus 5 has adaptive thinking on by default, and a
+      // detailed solicitation (20+ requirements) overran that budget before
+      // the JSON closed -- confirmed by testing (every checklist came back
+      // truncated mid-string, two came back completely empty).
+      max_tokens: 8192,
       system: CHECKLIST_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     }),
