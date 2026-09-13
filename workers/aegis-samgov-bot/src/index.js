@@ -112,7 +112,7 @@ export default {
   },
 };
 
-// ── Main scan (SAM.gov only — see file header re: USASpending) ────────────
+// ── Main scan (SAM.gov + Adzuna — see file header re: USASpending) ────────
 
 async function runScan(env) {
   const fetchErrors = [];
@@ -126,6 +126,14 @@ async function runScan(env) {
     }
   } else {
     fetchErrors.push("SAM.gov: SAM_API_KEY not configured");
+  }
+
+  if (env.ADZUNA_APP_ID && env.ADZUNA_APP_KEY) {
+    try {
+      allItems.push(...(await scanAdzuna(env)));
+    } catch (err) {
+      fetchErrors.push(`Adzuna: ${err.message}`);
+    }
   }
 
   const result = await ingestAndNotify(env, allItems, "sam.gov");
@@ -331,6 +339,75 @@ function mapUsaSpendingResults(results) {
     }));
 }
 
+// ── Source 3: Adzuna job postings (company-hiring signal) ─────────────────
+//
+// A company posting jobs for compliance/cybersecurity/IT roles may prefer
+// to buy that expertise from Aegis instead of hiring it. Separately, a law
+// firm hiring attorneys in TX/OK is a plausible LexFlow prospect -- run as
+// its own search since "attorney" isn't a compliance keyword.
+
+const ADZUNA_LEAD_KEYWORDS = ["fedramp", "cmmc compliance", "cybersecurity compliance", "information security officer"];
+const ADZUNA_LEGAL_LOCATIONS = ["Texas", "Oklahoma"];
+// Adzuna's "what" search is relevance-based, not a strict match -- a
+// what=attorney query returned "Medical Records Specialist" and "Sales
+// Executive" postings (confirmed by testing) purely because they were in
+// the same location bucket. Require the role itself to actually be legal.
+const LEGAL_TITLE_PATTERN = /\battorney\b|\bcounsel\b|\besq\.?\b/i;
+
+async function scanAdzuna(env) {
+  const items = [];
+
+  for (const keyword of ADZUNA_LEAD_KEYWORDS) {
+    const results = await fetchAdzuna(env, { what: keyword, max_days_old: 2, results_per_page: 20 });
+    for (const r of results) items.push(mapAdzunaResult(r, "adzuna", null));
+  }
+
+  for (const location of ADZUNA_LEGAL_LOCATIONS) {
+    const results = await fetchAdzuna(env, { what: "attorney", where: location, max_days_old: 2, results_per_page: 20 });
+    for (const r of results) {
+      if (!LEGAL_TITLE_PATTERN.test(r.title || "")) continue;
+      items.push(mapAdzunaResult(r, "adzuna_legal", `Legal Hiring Signal (${location})`));
+    }
+  }
+
+  return items;
+}
+
+async function fetchAdzuna(env, params) {
+  const query = new URLSearchParams({
+    app_id: env.ADZUNA_APP_ID,
+    app_key: env.ADZUNA_APP_KEY,
+    sort_by: "date",
+    ...params,
+  });
+  const res = await fetch(`https://api.adzuna.com/v1/api/jobs/us/search/1?${query}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Adzuna ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  return Array.isArray(data.results) ? data.results : [];
+}
+
+function mapAdzunaResult(r, source, forcedReason) {
+  const company = r.company?.display_name || "Unknown company";
+  return {
+    id: `adzuna_${r.id}`,
+    source,
+    title: `${company} — ${r.title || "(untitled posting)"}`,
+    agency: r.location?.display_name || null,
+    noticeType: "Job Posting (hiring signal, not open for bid)",
+    naicsCode: null,
+    setAside: null,
+    postedDate: r.created || null,
+    responseDeadline: null,
+    url: r.redirect_url,
+    description: r.description || "",
+    awardAmount: null,
+    forcedReason,
+  };
+}
+
 // ── Scoring (deterministic, no LLM) ────────────────────────────────────────
 
 function scoreItem(item) {
@@ -343,6 +420,11 @@ function scoreItem(item) {
       score += rule.weight;
       reasons.add(rule.label);
     }
+  }
+
+  if (item.forcedReason) {
+    score += 25;
+    reasons.add(item.forcedReason);
   }
 
   // Strict exact-code match only — never fall back to a "veteran" text
@@ -397,7 +479,11 @@ async function sendDigestEmail(env, items) {
       const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve`;
       const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=decline`;
       const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=save`;
-      const sourceLabel = item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" : "OPEN SOLICITATION";
+      const sourceLabel =
+        item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
+        item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
+        item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
+        "OPEN SOLICITATION";
       return `
         <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
           <div style="font-size:12px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">
@@ -412,7 +498,11 @@ async function sendDigestEmail(env, items) {
           </p>
           <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${item.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
           <p style="margin:8px 0;font-size:14px">
-            <a href="${escHtml(item.url)}">View ${item.source === "usaspending" ? "on USASpending.gov" : "on SAM.gov"}</a>
+            <a href="${escHtml(item.url)}">View ${
+              item.source === "usaspending" ? "on USASpending.gov" :
+              item.source.startsWith("adzuna") ? "job posting" :
+              "on SAM.gov"
+            }</a>
             ${item.responseDeadline ? ` · Response due: ${escHtml(item.responseDeadline)}` : ""}
           </p>
           <div style="margin-top:12px">
