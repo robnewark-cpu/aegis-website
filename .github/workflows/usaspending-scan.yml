@@ -1,0 +1,54 @@
+name: USASpending awarded-contracts scan
+
+# Cloudflare Workers cannot reach api.usaspending.gov directly (confirmed:
+# every request, even a bare GET, fails with a 525 TLS handshake error
+# between Cloudflare's edge and USASpending's origin). GitHub Actions runners
+# have normal networking and reach it fine, so this workflow does the fetch
+# and forwards the raw results to aegis-samgov-bot, which does the actual
+# scoring, D1 storage, and digest e-mail. See that Worker's src/index.js
+# file header for the full explanation.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # same daily cadence as the SAM.gov cron
+  workflow_dispatch: {} # lets you trigger a manual test run from the Actions tab
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch recent awarded contracts from USASpending.gov
+        env:
+          AWARD_MIN: "50000"
+          AWARD_MAX: "10000000"
+        run: |
+          START_DATE=$(date -u -d '2 days ago' +%Y-%m-%d)
+          END_DATE=$(date -u +%Y-%m-%d)
+
+          curl -sS -X POST https://api.usaspending.gov/api/v2/search/spending_by_award/ \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"filters\": {
+                \"time_period\": [{\"start_date\": \"$START_DATE\", \"end_date\": \"$END_DATE\"}],
+                \"award_type_codes\": [\"A\",\"B\",\"C\",\"D\"],
+                \"keywords\": [\"fedramp\",\"cmmc\",\"nist 800\",\"compliance\",\"cybersecurity\",\"information security\",\"cloud\",\"audit\",\"it consulting\",\"information technology\",\"software development\",\"web application\",\"website\"],
+                \"award_amounts\": [{\"lower_bound\": $AWARD_MIN, \"upper_bound\": $AWARD_MAX}]
+              },
+              \"fields\": [\"Recipient Name\",\"Award Amount\",\"Description\",\"Awarding Agency\",\"Period of Performance Start Date\"],
+              \"sort\": \"Award Amount\",
+              \"order\": \"desc\",
+              \"limit\": 100
+            }" \
+            -o usaspending-raw.json
+
+          cat usaspending-raw.json | head -c 500
+
+      - name: Forward results to aegis-samgov-bot for scoring + digest
+        env:
+          INGEST_SECRET: ${{ secrets.USASPENDING_INGEST_SECRET }}
+        run: |
+          curl -sS -X POST https://aegis-samgov-bot.robert-bb6.workers.dev/ingest-usaspending \
+            -H "Content-Type: application/json" \
+            -H "X-Ingest-Secret: $INGEST_SECRET" \
+            --data-binary @usaspending-raw.json \
+            -w "\nWorker response status: %{http_code}\n"

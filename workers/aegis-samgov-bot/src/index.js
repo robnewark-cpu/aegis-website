@@ -1,29 +1,49 @@
 /**
- * aegis-samgov-bot — daily SAM.gov opportunity scan + Robert-approval digest
+ * aegis-samgov-bot — daily opportunity + awarded-contract scan, one approval digest
+ *
+ * Two independent scans feed the same D1 table and the same digest e-mail:
+ *
+ *   "sam_gov"    — SAM.gov open solicitations Aegis could bid on directly.
+ *                  Query per NAICS_CODES, score by keyword rules.
+ *   "usaspending"— Contracts OTHERS just won (USASpending.gov award search).
+ *                  Not something to bid on — a signal that the winning
+ *                  company may now need compliance/security/IT help to
+ *                  perform on it. Filtered server-side by the same keyword
+ *                  list plus an award-size band (AWARD_MIN/AWARD_MAX) so we
+ *                  only see mid-size wins realistic for Aegis to approach,
+ *                  not tiny purchase orders or mega-prime contracts.
  *
  * Flow
  * ────
  * 1.  Cron trigger fires once a day (see wrangler.jsonc)
- * 2.  Query SAM.gov's public Opportunities API for each NAICS code in
- *     NAICS_CODES, over the last 2 days (overlap is fine — dedupe is by
- *     notice_id in D1)
- * 3.  Score each new opportunity against a fixed, auditable keyword list —
- *     no LLM judgment here, so the "Why Match" reasons are always real
- *     substring matches, never invented
- * 4.  Store every opportunity seen (any score) in D1; e-mail Robert a
- *     digest of only the ones scoring >= SCORE_THRESHOLD, each with
- *     Approve / Decline / Save-for-later links
+ * 2.  Run both scans, normalize results to a common shape
+ * 3.  Score each new item against a fixed, auditable keyword list — no LLM
+ *     judgment, so "Why Match" reasons are always real substring matches
+ * 4.  Store every item seen (any score) in D1; e-mail Robert a digest of
+ *     the ones scoring >= SCORE_THRESHOLD, each with Approve / Decline /
+ *     Save-for-later links
  * 5.  GET /respond?id=...&token=...&action=approve|decline|save updates
- *     that opportunity's status in D1
+ *     that item's status in D1
  *
  * This bot does NOT do anything after approval yet (no proposal drafting,
- * no compliance matrix) — that's an intentional v1 scope cut. Approving an
- * opportunity here just marks it "approved" in D1 for you to act on
- * manually.
+ * no compliance matrix, no outreach) — intentional v1 scope cut. Approving
+ * just marks status in D1 for you to act on manually.
  *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
  *   SAM_API_KEY     — free key from sam.gov -> Account Details -> Request API Key
  *   RESEND_API_KEY  — same Resend account used by the other Aegis workers
+ *   INGEST_SECRET   — shared secret for POST /ingest-usaspending (see below)
+ *
+ * IMPORTANT: Cloudflare Workers cannot reach api.usaspending.gov directly —
+ * every request (even a bare GET /) fails with a 525 TLS handshake error
+ * between Cloudflare's edge and USASpending's origin. Confirmed by testing,
+ * not a guess. So the USASpending fetch runs from a GitHub Actions workflow
+ * instead (.github/workflows/usaspending-scan.yml), which has normal
+ * outbound networking, and POSTs the raw API response to
+ * POST /ingest-usaspending here (authenticated via the X-Ingest-Secret
+ * header matching INGEST_SECRET). This Worker still does all the scoring,
+ * D1 storage, and digest e-mail — GitHub Actions is only a network relay
+ * for the one domain Workers can't reach.
  */
 
 const SAM_API = "https://api.sam.gov/opportunities/v2/search";
@@ -31,8 +51,9 @@ const RESEND_API = "https://api.resend.com/emails";
 const WORKER_URL = "https://aegis-samgov-bot.robert-bb6.workers.dev";
 
 // Fixed, auditable scoring rules. Every match here is a literal substring
-// found in the opportunity's title/description — nothing here is inferred
-// or guessed by an LLM. Edit these to tune what the bot flags as relevant.
+// found in the item's title/description — nothing here is inferred or
+// guessed by an LLM. Edit these to tune what the bot flags as relevant.
+// Also doubles as the USASpending "keywords" server-side filter.
 const KEYWORD_RULES = [
   { term: "fedramp", weight: 30, label: "FedRAMP" },
   { term: "cmmc", weight: 20, label: "CMMC" },
@@ -49,6 +70,10 @@ const KEYWORD_RULES = [
   { term: "website", weight: 5, label: "Web/Digital" },
 ];
 
+// Weighted highest of any single rule: a veteran set-aside is a structural
+// bidding advantage (other bidders are excluded entirely), which matters
+// more for "will Aegis actually win this" than a generic keyword hit.
+const VETERAN_SET_ASIDE_WEIGHT = 35;
 const VETERAN_SET_ASIDE_CODES = ["SDVOSBC", "SDVOSBS", "VSA", "VSS"];
 
 export default {
@@ -73,6 +98,12 @@ export default {
       return jsonResponse(result);
     }
 
+    // Receives raw USASpending.gov results fetched by the GitHub Actions
+    // workflow (Workers can't reach that domain directly — see file header).
+    if (request.method === "POST" && url.pathname === "/ingest-usaspending") {
+      return handleIngestUsaSpending(request, env);
+    }
+
     return jsonResponse({ error: "Not found" }, 404);
   },
 
@@ -81,78 +112,86 @@ export default {
   },
 };
 
-// ── Main scan ────────────────────────────────────────────────────────────
+// ── Main scan (SAM.gov only — see file header re: USASpending) ────────────
 
 async function runScan(env) {
-  if (!env.SAM_API_KEY) {
-    console.error("[aegis-samgov-bot] SAM_API_KEY not set");
-    return { error: "SAM_API_KEY not configured" };
-  }
-
-  const naicsCodes = (env.NAICS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
-  const threshold = Number(env.SCORE_THRESHOLD || "40");
-
-  const today = new Date();
-  const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
-  const postedFrom = formatSamDate(twoDaysAgo);
-  const postedTo = formatSamDate(today);
-
-  const byNoticeId = new Map();
   const fetchErrors = [];
+  const allItems = [];
 
-  for (const code of naicsCodes) {
+  if (env.SAM_API_KEY) {
     try {
-      const results = await fetchOpportunities(env, code, postedFrom, postedTo);
-      for (const opp of results) {
-        if (opp.noticeId) byNoticeId.set(opp.noticeId, opp);
-      }
+      allItems.push(...(await scanSamGov(env)));
     } catch (err) {
-      console.error(`[aegis-samgov-bot] NAICS ${code} fetch failed:`, err.message);
-      fetchErrors.push(`${code}: ${err.message}`);
+      fetchErrors.push(`SAM.gov: ${err.message}`);
     }
+  } else {
+    fetchErrors.push("SAM.gov: SAM_API_KEY not configured");
   }
 
+  const result = await ingestAndNotify(env, allItems, "sam.gov");
+  if (fetchErrors.length > 0 && env.RESEND_API_KEY && result.totalNew === 0) {
+    await notifyRobert(env, {
+      subject: "Opportunity bot — fetch errors, nothing new found",
+      html: `<p>Errors: ${escHtml(fetchErrors.join("; "))}</p>`,
+    });
+  }
+  return { ...result, fetchErrors };
+}
+
+// ── Shared: dedupe against D1, score, store, digest e-mail ─────────────────
+
+async function ingestAndNotify(env, allItems) {
+  const threshold = Number(env.SCORE_THRESHOLD || "20");
   const newQualifying = [];
   let totalSeen = 0;
   let totalNew = 0;
 
-  for (const opp of byNoticeId.values()) {
+  for (const item of allItems) {
     totalSeen++;
     const existing = await env.DB.prepare("SELECT notice_id FROM opportunities WHERE notice_id = ?")
-      .bind(opp.noticeId)
+      .bind(item.id)
       .first();
     if (existing) continue;
 
     totalNew++;
-    const description = await fetchDescription(env, opp).catch(() => "");
-    const { score, reasons } = scoreOpportunity(opp, description);
+    // Only resolve the full description now, for genuinely new items — SAM.gov
+    // descriptions are a separate subrequest each, and Workers has a hard cap
+    // on subrequests per invocation. Resolving these for all 40+ opportunities
+    // seen (most already in D1) blew through that limit.
+    if (item.source === "sam_gov" && item.descriptionRef) {
+      item.description = await fetchDescription(env, item.descriptionRef).catch(() => "");
+    }
+    const { score, reasons } = scoreItem(item);
     const token = crypto.randomUUID();
 
     await env.DB.prepare(
       `INSERT INTO opportunities
         (notice_id, title, agency, notice_type, naics_code, set_aside, posted_date,
-         response_deadline, sam_url, description_excerpt, score, matched_reasons, respond_token)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         response_deadline, sam_url, description_excerpt, score, matched_reasons,
+         respond_token, source, award_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
-        opp.noticeId,
-        opp.title || "(untitled)",
-        opp.fullParentPathName || opp.department || null,
-        opp.type || null,
-        opp.naicsCode || null,
-        opp.typeOfSetAside || null,
-        opp.postedDate || null,
-        opp.responseDeadLine || opp.reponseDeadLine || null,
-        opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`,
-        description.slice(0, 500),
+        item.id,
+        item.title,
+        item.agency,
+        item.noticeType,
+        item.naicsCode,
+        item.setAside,
+        item.postedDate,
+        item.responseDeadline,
+        item.url,
+        (item.description || "").slice(0, 500),
         score,
         JSON.stringify(reasons),
         token,
+        item.source,
+        item.awardAmount,
       )
       .run();
 
     if (score >= threshold) {
-      newQualifying.push({ ...opp, score, reasons, token });
+      newQualifying.push({ ...item, score, reasons, token });
     }
   }
 
@@ -160,16 +199,68 @@ async function runScan(env) {
     await sendDigestEmail(env, newQualifying);
   }
 
-  if (fetchErrors.length > 0 && env.RESEND_API_KEY && totalNew === 0) {
-    // Only surface fetch errors if we got nothing useful this run, so a
-    // single flaky NAICS code among several working ones doesn't spam you.
-    await notifyRobert(env, {
-      subject: "SAM.gov bot — fetch errors, no new opportunities found",
-      html: `<p>Errors: ${escHtml(fetchErrors.join("; "))}</p>`,
-    });
+  return { totalSeen, totalNew, qualifying: newQualifying.length };
+}
+
+// ── USASpending ingest endpoint (called by GitHub Actions) ─────────────────
+
+async function handleIngestUsaSpending(request, env) {
+  if (!env.INGEST_SECRET) {
+    return jsonResponse({ error: "INGEST_SECRET not configured" }, 500);
+  }
+  if (request.headers.get("X-Ingest-Secret") !== env.INGEST_SECRET) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
-  return { totalSeen, totalNew, qualifying: newQualifying.length, fetchErrors };
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const rawResults = Array.isArray(body.results) ? body.results : [];
+  const items = mapUsaSpendingResults(rawResults);
+  const result = await ingestAndNotify(env, items);
+  return jsonResponse(result);
+}
+
+// ── Source 1: SAM.gov open solicitations ────────────────────────────────────
+
+async function scanSamGov(env) {
+  const naicsCodes = (env.NAICS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const today = new Date();
+  const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const postedFrom = formatSamDate(twoDaysAgo);
+  const postedTo = formatSamDate(today);
+
+  const byNoticeId = new Map();
+  for (const code of naicsCodes) {
+    const results = await fetchOpportunities(env, code, postedFrom, postedTo);
+    for (const opp of results) {
+      if (opp.noticeId) byNoticeId.set(opp.noticeId, opp);
+    }
+  }
+
+  const items = [];
+  for (const opp of byNoticeId.values()) {
+    items.push({
+      id: opp.noticeId,
+      source: "sam_gov",
+      title: opp.title || "(untitled)",
+      agency: opp.fullParentPathName || opp.department || null,
+      noticeType: opp.type || "Solicitation",
+      naicsCode: opp.naicsCode || null,
+      setAside: opp.typeOfSetAside || null,
+      postedDate: opp.postedDate || null,
+      responseDeadline: opp.responseDeadLine || null,
+      url: opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`,
+      description: "", // resolved lazily in runScan, only for new items
+      descriptionRef: opp.description || null,
+      awardAmount: null,
+    });
+  }
+  return items;
 }
 
 async function fetchOpportunities(env, naicsCode, postedFrom, postedTo) {
@@ -186,9 +277,6 @@ async function fetchOpportunities(env, naicsCode, postedFrom, postedTo) {
     throw new Error(`SAM.gov ${res.status}: ${body.slice(0, 300)}`);
   }
   const data = await res.json();
-  // Defensive: the documented response key is "opportunitiesData", but
-  // handle a couple of plausible alternates rather than assume and fail
-  // silently if SAM.gov's shape differs from what's documented.
   const list = data.opportunitiesData || data.data || data.results || [];
   if (!Array.isArray(list)) {
     console.error("[aegis-samgov-bot] Unrecognized SAM.gov response shape, keys:", Object.keys(data));
@@ -197,17 +285,15 @@ async function fetchOpportunities(env, naicsCode, postedFrom, postedTo) {
   return list;
 }
 
-async function fetchDescription(env, opp) {
+async function fetchDescription(env, desc) {
   // The search API's "description" field is often a URL to fetch the full
   // notice text separately, not the text itself. Handle both cases.
-  const desc = opp.description;
   if (!desc) return "";
   if (typeof desc === "string" && /^https?:\/\//.test(desc)) {
     try {
       const res = await fetch(`${desc}${desc.includes("?") ? "&" : "?"}api_key=${env.SAM_API_KEY}`);
       if (!res.ok) return "";
       const text = await res.text();
-      // Response may be JSON with a "description" field, or plain text.
       try {
         const json = JSON.parse(text);
         return typeof json.description === "string" ? json.description : text;
@@ -221,10 +307,34 @@ async function fetchDescription(env, opp) {
   return String(desc);
 }
 
+// ── Source 2: USASpending.gov awarded contracts (prospect signal) ─────────
+//
+// The fetch itself happens in GitHub Actions (see file header) — this just
+// maps the raw API rows it forwards into the same item shape SAM.gov uses.
+
+function mapUsaSpendingResults(results) {
+  return results
+    .filter((r) => r.generated_internal_id)
+    .map((r) => ({
+      id: `usa_${r.generated_internal_id}`,
+      source: "usaspending",
+      title: `${r["Recipient Name"] || "Unknown recipient"} — ${truncate(r["Description"] || "(no description)", 80)}`,
+      agency: r["Awarding Agency"] || null,
+      noticeType: "Awarded Contract (prospect, not open for bid)",
+      naicsCode: null,
+      setAside: null,
+      postedDate: r["Period of Performance Start Date"] || null,
+      responseDeadline: null,
+      url: `https://www.usaspending.gov/award/${r.generated_internal_id}`,
+      description: r["Description"] || "",
+      awardAmount: typeof r["Award Amount"] === "number" ? r["Award Amount"] : null,
+    }));
+}
+
 // ── Scoring (deterministic, no LLM) ────────────────────────────────────────
 
-function scoreOpportunity(opp, description) {
-  const haystack = `${opp.title || ""} ${description || ""}`.toLowerCase();
+function scoreItem(item) {
+  const haystack = `${item.title || ""} ${item.description || ""}`.toLowerCase();
   const reasons = new Set();
   let score = 0;
 
@@ -235,13 +345,12 @@ function scoreOpportunity(opp, description) {
     }
   }
 
-  // Strict match only — do NOT fall back to a "veteran" text search. Many VA
-  // opportunities mention "veteran" throughout (it's the agency's name) with
-  // no actual veteran-owned set-aside, which would otherwise inflate scores
-  // on notices Aegis has no actual preference on.
-  const setAsideCode = (opp.typeOfSetAside || "").toUpperCase();
+  // Strict exact-code match only — never fall back to a "veteran" text
+  // search. Many VA opportunities/awards mention "veteran" throughout
+  // (it's the agency's name) with no actual veteran-owned set-aside.
+  const setAsideCode = (item.setAside || "").toUpperCase();
   if (VETERAN_SET_ASIDE_CODES.some((c) => setAsideCode === c)) {
-    score += 20;
+    score += VETERAN_SET_ASIDE_WEIGHT;
     reasons.add("Veteran-Owned Set-Aside");
   }
 
@@ -277,30 +386,34 @@ async function handleRespond(env, url) {
 
 // ── E-mail ──────────────────────────────────────────────────────────────────
 
-async function sendDigestEmail(env, opportunities) {
+async function sendDigestEmail(env, items) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
 
-  const sorted = [...opportunities].sort((a, b) => b.score - a.score);
+  const sorted = [...items].sort((a, b) => b.score - a.score);
 
   const cardsHtml = sorted
-    .map((opp) => {
-      const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(opp.noticeId)}&token=${opp.token}&action=approve`;
-      const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(opp.noticeId)}&token=${opp.token}&action=decline`;
-      const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(opp.noticeId)}&token=${opp.token}&action=save`;
+    .map((item) => {
+      const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve`;
+      const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=decline`;
+      const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=save`;
+      const sourceLabel = item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" : "OPEN SOLICITATION";
       return `
         <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
-          <div style="font-size:12px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">Score: ${opp.score}/100</div>
-          <h3 style="margin:6px 0">${escHtml(opp.title || "(untitled)")}</h3>
+          <div style="font-size:12px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">
+            Score: ${item.score}/100 &nbsp;·&nbsp; ${sourceLabel}
+          </div>
+          <h3 style="margin:6px 0">${escHtml(item.title)}</h3>
           <p style="margin:4px 0;color:#555;font-size:14px">
-            ${opp.fullParentPathName ? escHtml(opp.fullParentPathName) + " · " : ""}
-            NAICS ${escHtml(opp.naicsCode || "n/a")}
-            ${opp.typeOfSetAside ? " · " + escHtml(opp.typeOfSetAside) : ""}
+            ${item.agency ? escHtml(item.agency) + " · " : ""}
+            ${item.naicsCode ? "NAICS " + escHtml(item.naicsCode) + " · " : ""}
+            ${item.setAside ? escHtml(item.setAside) + " · " : ""}
+            ${item.awardAmount ? "Award: $" + Math.round(item.awardAmount).toLocaleString() : ""}
           </p>
-          <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${opp.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
+          <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${item.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
           <p style="margin:8px 0;font-size:14px">
-            <a href="${escHtml(opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`)}">View on SAM.gov</a>
-            ${opp.responseDeadLine ? ` · Response due: ${escHtml(opp.responseDeadLine)}` : ""}
+            <a href="${escHtml(item.url)}">View ${item.source === "usaspending" ? "on USASpending.gov" : "on SAM.gov"}</a>
+            ${item.responseDeadline ? ` · Response due: ${escHtml(item.responseDeadline)}` : ""}
           </p>
           <div style="margin-top:12px">
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
@@ -314,16 +427,16 @@ async function sendDigestEmail(env, opportunities) {
   const res = await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
-    subject: `SAM.gov: ${sorted.length} new matching opportunit${sorted.length === 1 ? "y" : "ies"}`,
+    subject: `${sorted.length} new matching item${sorted.length === 1 ? "" : "s"} (SAM.gov + awarded contracts)`,
     html: `<div style="font-family:sans-serif;max-width:640px">
-      <h2>New SAM.gov opportunities</h2>
-      <p style="color:#555">Scored against your keyword rules. Nothing here was auto-approved — click a link below to act.</p>
+      <h2>New opportunities &amp; prospects</h2>
+      <p style="color:#555">Scored against your keyword rules. "Awarded Contract" items are companies that just won a contract that may need help performing on it — not something to bid on. Nothing here was auto-approved.</p>
       ${cardsHtml}
     </div>`,
     text: sorted
       .map(
-        (opp) =>
-          `[${opp.score}/100] ${opp.title}\nWhy: ${opp.reasons.join(", ")}\n${opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`}\nApprove: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=decline`,
+        (item) =>
+          `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`,
       )
       .join("\n\n"),
   });
@@ -354,6 +467,11 @@ function formatSamDate(d) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${mm}/${dd}/${d.getFullYear()}`;
+}
+
+
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }
 
 function jsonResponse(body, status = 200) {
