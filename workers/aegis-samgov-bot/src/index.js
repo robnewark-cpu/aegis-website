@@ -30,9 +30,14 @@
  * just marks status in D1 for you to act on manually.
  *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
- *   SAM_API_KEY     — free key from sam.gov -> Account Details -> Request API Key
- *   RESEND_API_KEY  — same Resend account used by the other Aegis workers
- *   INGEST_SECRET   — shared secret for POST /ingest-usaspending (see below)
+ *   SAM_API_KEY      — free key from sam.gov -> Account Details -> Request API Key
+ *   RESEND_API_KEY   — same Resend account used by the other Aegis workers
+ *   INGEST_SECRET    — shared secret for POST /ingest-usaspending (see below)
+ *   ADZUNA_APP_ID / ADZUNA_APP_KEY — from developer.adzuna.com
+ *   USAJOBS_API_KEY  — from developer.usajobs.gov
+ *   USAJOBS_EMAIL    — the email registered with that key; USAJOBS requires
+ *                      it as the User-Agent header on every request, not
+ *                      just the key
  *
  * IMPORTANT: Cloudflare Workers cannot reach api.usaspending.gov directly —
  * every request (even a bare GET /) fails with a 525 TLS handshake error
@@ -133,6 +138,14 @@ async function runScan(env) {
       allItems.push(...(await scanAdzuna(env)));
     } catch (err) {
       fetchErrors.push(`Adzuna: ${err.message}`);
+    }
+  }
+
+  if (env.USAJOBS_API_KEY && env.USAJOBS_EMAIL) {
+    try {
+      allItems.push(...(await scanUsaJobs(env)));
+    } catch (err) {
+      fetchErrors.push(`USAJOBS: ${err.message}`);
     }
   }
 
@@ -408,6 +421,78 @@ function mapAdzunaResult(r, source, forcedReason) {
   };
 }
 
+// ── Source 4: USAJOBS federal postings ──────────────────────────────────────
+//
+// Federal-only, so this is a weaker signal than Adzuna for "buy from Aegis
+// instead of hiring" (agencies don't substitute a consultant for a hire the
+// way a private company might) — kept mainly for the TX/OK attorney search,
+// plus a general compliance/cyber sweep as a bonus. Auth requires the
+// registered e-mail as User-Agent, not just the API key (USAJOBS-specific).
+
+const USAJOBS_LEAD_KEYWORDS = ["fedramp", "cmmc", "cybersecurity compliance"];
+const USAJOBS_LEGAL_LOCATIONS = ["Texas", "Oklahoma"];
+
+async function scanUsaJobs(env) {
+  const items = [];
+
+  for (const keyword of USAJOBS_LEAD_KEYWORDS) {
+    const results = await fetchUsaJobs(env, { Keyword: keyword, DatePosted: "2", ResultsPerPage: "25" });
+    for (const r of results) items.push(mapUsaJobsResult(r, "usajobs", null));
+  }
+
+  for (const location of USAJOBS_LEGAL_LOCATIONS) {
+    const results = await fetchUsaJobs(env, {
+      PositionTitle: "Attorney",
+      LocationName: location,
+      DatePosted: "2",
+      ResultsPerPage: "25",
+    });
+    for (const r of results) {
+      const title = r.MatchedObjectDescriptor?.PositionTitle || "";
+      if (!LEGAL_TITLE_PATTERN.test(title)) continue;
+      items.push(mapUsaJobsResult(r, "usajobs_legal", `Legal Hiring Signal (${location}, federal)`));
+    }
+  }
+
+  return items;
+}
+
+async function fetchUsaJobs(env, params) {
+  const query = new URLSearchParams(params);
+  const res = await fetch(`https://data.usajobs.gov/api/search?${query}`, {
+    headers: {
+      Host: "data.usajobs.gov",
+      "User-Agent": env.USAJOBS_EMAIL,
+      "Authorization-Key": env.USAJOBS_API_KEY,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`USAJOBS ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  return data.SearchResult?.SearchResultItems || [];
+}
+
+function mapUsaJobsResult(r, source, forcedReason) {
+  const d = r.MatchedObjectDescriptor || {};
+  return {
+    id: `usajobs_${r.MatchedObjectId}`,
+    source,
+    title: `${d.DepartmentName || "Federal agency"} — ${d.PositionTitle || "(untitled posting)"}`,
+    agency: d.PositionLocationDisplay || d.OrganizationName || null,
+    noticeType: "Federal Job Posting (hiring signal, not open for bid)",
+    naicsCode: null,
+    setAside: null,
+    postedDate: d.PublicationStartDate || null,
+    responseDeadline: d.ApplicationCloseDate || null,
+    url: d.PositionURI || null,
+    description: d.QualificationSummary || d.UserArea?.Details?.JobSummary || "",
+    awardAmount: null,
+    forcedReason,
+  };
+}
+
 // ── Scoring (deterministic, no LLM) ────────────────────────────────────────
 
 function scoreItem(item) {
@@ -483,6 +568,8 @@ async function sendDigestEmail(env, items) {
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
         item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
+        item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
         "OPEN SOLICITATION";
       return `
         <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
@@ -500,7 +587,7 @@ async function sendDigestEmail(env, items) {
           <p style="margin:8px 0;font-size:14px">
             <a href="${escHtml(item.url)}">View ${
               item.source === "usaspending" ? "on USASpending.gov" :
-              item.source.startsWith("adzuna") ? "job posting" :
+              item.source.startsWith("adzuna") || item.source.startsWith("usajobs") ? "job posting" :
               "on SAM.gov"
             }</a>
             ${item.responseDeadline ? ` · Response due: ${escHtml(item.responseDeadline)}` : ""}
