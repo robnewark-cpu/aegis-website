@@ -25,14 +25,19 @@
  * 5.  GET /respond?id=...&token=...&action=approve|decline|save updates
  *     that item's status in D1
  *
- * Phase 2A: approving a sam_gov item also has Claude draft a requirements
+ * Phase 2A: approving a sam_gov item has Claude draft a requirements
  * checklist from the full solicitation text (re-fetched fresh from SAM.gov
  * by noticeid — D1 only stores a 500-char excerpt) and e-mails it, clearly
  * labeled as an unverified AI-drafted first pass, never authoritative. The
  * prompt is strictly grounded: only report what's literally in the text,
- * never infer a plausible-sounding requirement. Other sources (usaspending/
- * adzuna/usajobs prospects) still do nothing beyond the D1 status update on
- * approve — that's Phase 2B, not built yet.
+ * never infer a plausible-sounding requirement.
+ *
+ * Phase 2B: approving a usaspending/adzuna/adzuna_legal/usajobs/usajobs_legal
+ * item has Claude draft a short outreach e-mail instead, grounded only in
+ * the D1 row's own data (company/title, why it matched, description
+ * excerpt). None of those APIs return a contact e-mail or hiring-manager
+ * name, so this is a DRAFT ONLY, e-mailed to Robert — never auto-sent to
+ * the prospect. Robert finds the real recipient and sends it himself.
  *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
  *   SAM_API_KEY      — free key from sam.gov -> Account Details -> Request API Key
@@ -544,7 +549,12 @@ async function handleRespond(env, url, ctx) {
     return htmlResponse("Invalid request.", 400);
   }
 
-  const row = await env.DB.prepare("SELECT respond_token, title, source FROM opportunities WHERE notice_id = ?")
+  const row = await env.DB
+    .prepare(
+      `SELECT respond_token, title, source, agency, description_excerpt, award_amount,
+              matched_reasons, sam_url, naics_code, set_aside
+       FROM opportunities WHERE notice_id = ?`,
+    )
     .bind(id)
     .first();
 
@@ -558,13 +568,23 @@ async function handleRespond(env, url, ctx) {
     .run();
 
   let extra = "";
-  if (action === "approve" && row.source === "sam_gov" && env.ANTHROPIC_API_KEY) {
-    ctx.waitUntil(
-      draftSamGovChecklist(env, id, row.title).catch((err) =>
-        console.error("[aegis-samgov-bot] Checklist draft failed:", err.message),
-      ),
-    );
-    extra = " Drafting a requirements checklist now — check your e-mail in about a minute.";
+  const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal"];
+  if (action === "approve" && env.ANTHROPIC_API_KEY) {
+    if (row.source === "sam_gov") {
+      ctx.waitUntil(
+        draftSamGovChecklist(env, id, row.title).catch((err) =>
+          console.error("[aegis-samgov-bot] Checklist draft failed:", err.message),
+        ),
+      );
+      extra = " Drafting a requirements checklist now — check your e-mail in about a minute.";
+    } else if (PROSPECT_SOURCES.includes(row.source)) {
+      ctx.waitUntil(
+        draftOutreachEmail(env, row).catch((err) =>
+          console.error("[aegis-samgov-bot] Outreach draft failed:", err.message),
+        ),
+      );
+      extra = " Drafting an outreach e-mail now — check your e-mail in about a minute.";
+    }
   }
 
   return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${status}</strong>.${extra}`, 200);
@@ -614,7 +634,11 @@ async function callAnthropicForChecklist(env, { title, description, opp }) {
     },
     body: JSON.stringify({
       model: "claude-opus-5",
-      max_tokens: 2048,
+      // 2048 was too low: Opus 5 has adaptive thinking on by default, and a
+      // detailed solicitation (20+ requirements) overran that budget before
+      // the JSON closed -- confirmed by testing (every checklist came back
+      // truncated mid-string, two came back completely empty).
+      max_tokens: 8192,
       system: CHECKLIST_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userContent }],
     }),
@@ -624,7 +648,7 @@ async function callAnthropicForChecklist(env, { title, description, opp }) {
     throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
   }
   const data = await res.json();
-  const raw = data.content?.[0]?.text ?? "";
+  const raw = data.content?.find((b) => b.type === "text")?.text ?? "";
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
     return JSON.parse(cleaned);
@@ -683,6 +707,120 @@ async function sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, ch
       ${linksHtml}
     </div>`,
     text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}`,
+  });
+}
+
+// ── Phase 2B: AI-drafted outreach e-mail on Approve (prospect sources) ─────
+//
+// usaspending/adzuna/usajobs rows are "this company might need Aegis" leads,
+// not open solicitations -- there's no bid to draft a checklist for. None of
+// those APIs return a contact e-mail or hiring-manager name, so the real
+// ceiling here is "draft it, Robert finds the recipient and sends it
+// himself" -- never auto-send. The draft goes to Robert, never the prospect.
+
+// Real Aegis service names/one-liners only, so the model can reference an
+// actual offering instead of inventing one. Keep in sync with fees.html.
+const AEGIS_SERVICES_CONTEXT = `\
+- FedRAMP 20x Readiness Kickoff ($3,000): advisory gap review and evidence-mapping against current FedRAMP 20x rules
+- AI Visibility Audit & Strategy ($500): AI search visibility audit + 90-day roadmap
+- Content & Schema Rewrite ($1,500): site copy rewrite with schema markup for AI-search readability
+- Structured Data Implementation ($500): JSON-LD schema so AI assistants can read business facts from a site
+- Google Business Profile Optimization ($300) and Local Citation Building ($200): local search/AI visibility hygiene
+- Website Migration & Redesign ($3,000): marketing-site build
+- LexFlow (part of AegisOS): legal practice management software -- client/matter records, trust/IOLTA foundation, billing`;
+
+async function draftOutreachEmail(env, row) {
+  const reasons = JSON.parse(row.matched_reasons || "[]");
+  const isLegal = row.source === "adzuna_legal" || row.source === "usajobs_legal";
+
+  const context = [
+    `Source: ${row.source}`,
+    `Title/company line as recorded: ${row.title}`,
+    row.agency ? `Location/agency: ${row.agency}` : null,
+    row.award_amount ? `Award amount: $${Math.round(row.award_amount).toLocaleString()}` : null,
+    `Why this matched Aegis's criteria: ${reasons.join(", ") || "none recorded"}`,
+    `Excerpt of the original posting/contract description: ${row.description_excerpt || "(none captured)"}`,
+    row.sam_url ? `Source link: ${row.sam_url}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const draft = await callAnthropicForOutreach(env, { context, isLegal });
+  await sendOutreachDraftEmail(env, { row, draft });
+}
+
+async function callAnthropicForOutreach(env, { context, isLegal }) {
+  const system = `\
+You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, a veteran-owned technology/compliance consulting company, for Robert (the owner) to review before sending.
+
+STRICT GROUNDING RULE: use only the facts given below about the recipient. Never invent details about their company, their internal operations, their needs, or their budget beyond what's stated. If you reference why Aegis might help, tie it directly and specifically to the "why this matched" reasons given -- don't generalize into generic sales language.
+
+You may reference ONE of Aegis's real services from this list if it genuinely fits (do not invent a service or price not on this list):
+${AEGIS_SERVICES_CONTEXT}
+
+${isLegal ? "This is a law firm hiring signal -- the relevant offering is LexFlow, not the compliance/FedRAMP services." : ""}
+
+Tone: brief, respectful, no hype, no false familiarity ("I noticed your company is doing great things!"). Assume the recipient is busy. 120-180 words.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
+}`;
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-5",
+      max_tokens: 4096,
+      system,
+      messages: [{ role: "user", content: context }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const raw = data.content?.find((b) => b.type === "text")?.text ?? "";
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return { parseError: true, raw };
+  }
+}
+
+async function sendOutreachDraftEmail(env, { row, draft }) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const draftHtml = draft.parseError
+    ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
+       <pre style="white-space:pre-wrap;font-size:13px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(draft.raw)}</pre>`
+    : `
+      <p><strong>Suggested subject:</strong> ${escHtml(draft.subject || "")}</p>
+      <div style="background:#f9f9f9;border:1px solid #ddd;padding:16px;white-space:pre-wrap;font-family:sans-serif">${escHtml(draft.body || "")}</div>`;
+
+  await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `Outreach draft (AI, unsent) — ${row.title}`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
+        ⚠ AI-drafted, NOT sent to anyone. No contact e-mail is available from this source (${escHtml(row.source)}) --
+        find the right recipient yourself before using this. Verify the claims against the source link below.
+      </p>
+      <h2>${escHtml(row.title)}</h2>
+      ${row.sam_url ? `<p><a href="${escHtml(row.sam_url)}">Source link</a></p>` : ""}
+      ${draftHtml}
+    </div>`,
+    text: `AI-drafted outreach e-mail for: ${row.title}\n(NOT sent -- no contact info available, find the recipient yourself.)\n\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}`,
   });
 }
 
