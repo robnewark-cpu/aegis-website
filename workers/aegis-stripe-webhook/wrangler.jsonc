@@ -1,0 +1,31 @@
+{
+  // Wrangler v3 / v4 config for aegis-stripe-webhook
+  "name": "aegis-stripe-webhook",
+  "main": "src/index.js",
+  "compatibility_date": "2024-09-23",
+
+  // Non-secret configuration — safe to commit.
+  //
+  // REQUIRED secrets (set via CLI, never commit values):
+  //   wrangler secret put STRIPE_SECRET_KEY    --name aegis-stripe-webhook
+  //     -> restricted key is fine: needs read access to Checkout Sessions only
+  //   wrangler secret put STRIPE_WEBHOOK_SECRET --name aegis-stripe-webhook
+  //     -> the "signing secret" (whsec_...) Stripe shows when you create the
+  //        webhook endpoint at dashboard.stripe.com/webhooks
+  //   wrangler secret put RESEND_API_KEY --name aegis-stripe-webhook
+  //
+  // After deploying, create the webhook endpoint in Stripe:
+  //   dashboard.stripe.com/webhooks -> + Add endpoint
+  //   URL: https://aegis-stripe-webhook.<your-subdomain>.workers.dev/stripe
+  //   Event: checkout.session.completed
+  // Stripe then shows the signing secret — paste it as STRIPE_WEBHOOK_SECRET above.
+  "vars": {
+    "FROM_EMAIL": "noreply@aegisglobalholdings.com",
+    "TO_EMAIL":   "info@aegisglobalholdings.com",
+
+    // Product catalog is matched by the Payment Link's product name (from
+    // the Checkout Session line items), not by price ID, so no per-SKU vars
+    // are needed here — see FULFILLMENT_CATALOG in src/index.js.
+    "AEGIS_APP_URL": "https://aegisglobalholdings.com/book-demo.html"
+  }
+}
