@@ -807,7 +807,13 @@ ${AEGIS_SERVICES_CONTEXT}
 
 ${isLegal ? "This is a law firm hiring signal -- the relevant offering is LexFlow, not the compliance/FedRAMP services." : ""}
 
-Tone: brief, respectful, no hype, no false familiarity ("I noticed your company is doing great things!"). Assume the recipient is busy. 120-180 words.
+TONE AND STYLE -- formal business-development correspondence, not a casual cold email:
+- No standalone greeting like "Hello," or "Hi," on its own line -- either open with a formal salutation appropriate for an unnamed recipient ("Good afternoon," or "To the [Company] team,") or begin directly with the context sentence, no greeting at all.
+- No contractions anywhere (write "that is" not "that's", "we do not" not "we don't", "I am" not "I'm").
+- No hype, no false familiarity ("I noticed your company is doing great things!"), no filler transitions ("So," "Also," "Just wanted to..." to open a sentence).
+- Precise, declarative sentences. Assume the recipient is a senior decision-maker with little time.
+- Structure: one sentence of factual context (why you are writing) -> one sentence introducing Aegis Global Holdings -> the specific service and price -> a single, low-pressure next step -> a brief, courteous closing sentence. No signature block.
+- 120-180 words.
 
 Respond with ONLY a raw JSON object, no markdown fences:
 {
