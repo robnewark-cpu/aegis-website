@@ -140,10 +140,10 @@ async function runScan(env) {
         opp.fullParentPathName || opp.department || null,
         opp.type || null,
         opp.naicsCode || null,
-        opp.setAside || opp.setAsideCode || null,
+        opp.typeOfSetAside || null,
         opp.postedDate || null,
         opp.responseDeadLine || opp.reponseDeadLine || null,
-        `https://sam.gov/opp/${opp.noticeId}/view`,
+        opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`,
         description.slice(0, 500),
         score,
         JSON.stringify(reasons),
@@ -235,8 +235,12 @@ function scoreOpportunity(opp, description) {
     }
   }
 
-  const setAsideCode = (opp.setAsideCode || opp.setAside || "").toUpperCase();
-  if (VETERAN_SET_ASIDE_CODES.some((c) => setAsideCode.includes(c)) || haystack.includes("veteran")) {
+  // Strict match only — do NOT fall back to a "veteran" text search. Many VA
+  // opportunities mention "veteran" throughout (it's the agency's name) with
+  // no actual veteran-owned set-aside, which would otherwise inflate scores
+  // on notices Aegis has no actual preference on.
+  const setAsideCode = (opp.typeOfSetAside || "").toUpperCase();
+  if (VETERAN_SET_ASIDE_CODES.some((c) => setAsideCode === c)) {
     score += 20;
     reasons.add("Veteran-Owned Set-Aside");
   }
@@ -291,11 +295,11 @@ async function sendDigestEmail(env, opportunities) {
           <p style="margin:4px 0;color:#555;font-size:14px">
             ${opp.fullParentPathName ? escHtml(opp.fullParentPathName) + " · " : ""}
             NAICS ${escHtml(opp.naicsCode || "n/a")}
-            ${opp.setAside ? " · " + escHtml(opp.setAside) : ""}
+            ${opp.typeOfSetAside ? " · " + escHtml(opp.typeOfSetAside) : ""}
           </p>
           <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${opp.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
           <p style="margin:8px 0;font-size:14px">
-            <a href="https://sam.gov/opp/${escHtml(opp.noticeId)}/view">View on SAM.gov</a>
+            <a href="${escHtml(opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`)}">View on SAM.gov</a>
             ${opp.responseDeadLine ? ` · Response due: ${escHtml(opp.responseDeadLine)}` : ""}
           </p>
           <div style="margin-top:12px">
@@ -319,7 +323,7 @@ async function sendDigestEmail(env, opportunities) {
     text: sorted
       .map(
         (opp) =>
-          `[${opp.score}/100] ${opp.title}\nWhy: ${opp.reasons.join(", ")}\nhttps://sam.gov/opp/${opp.noticeId}/view\nApprove: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=decline`,
+          `[${opp.score}/100] ${opp.title}\nWhy: ${opp.reasons.join(", ")}\n${opp.uiLink || `https://sam.gov/workspace/contract/opp/${opp.noticeId}/view`}\nApprove: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${opp.noticeId}&token=${opp.token}&action=decline`,
       )
       .join("\n\n"),
   });
