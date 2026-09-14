@@ -50,6 +50,14 @@
     // under it and completely invisible to the bot under the original list.
     "NAICS_CODES": "541511,541512,541519,541611,541618,541690,518210",
 
+    // Robert's three other businesses, each with their own NAICS codes and
+    // (in src/index.js) their own keyword scoring rules -- results land in
+    // the same daily digest, each item tagged "For: <business>". See
+    // buildNaicsBusinessMap() / BUSINESS_KEYWORD_RULES in src/index.js.
+    "LOANSERVICING_NAICS_CODES": "522390", // Veteran Loan Servicing (veteranloanservicing.com) -- loan servicing, not origination
+    "MODMEDIATIONS_NAICS_CODES": "541199", // Mod Mediations (modmediations.com) -- mediation/ADR, SAM.gov's catch-all legal-services code
+    "NEWARKFIRM_NAICS_CODES": "541110",    // Newark Firm (newarkfirm.com) -- Offices of Lawyers, for solicitations the firm itself could bid on
+
     // Minimum score (0-100) for an item to be e-mailed. Lowered from the
     // original 40 so more real leads surface — approve/decline in the
     // e-mail is the actual filter now, not this threshold. Raise it back

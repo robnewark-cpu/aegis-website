@@ -109,6 +109,71 @@ const KEYWORD_RULES = [
   { term: "website", weight: 5, label: "Web/Digital" },
 ];
 
+// Robert also owns three other businesses. Each gets its own NAICS codes
+// (see NAICS_CODES vars below) and its own keyword rules -- mixing them
+// into KEYWORD_RULES above would dilute Aegis's own scoring with terms
+// that mean nothing to an IT/compliance consultancy, and vice versa. Every
+// sam_gov item is tagged with a "business" (see buildNaicsBusinessMap) and
+// scored only against that business's own rules. The veteran-set-aside
+// bonus below stays universal across all four -- it's a structural bidding
+// advantage regardless of which business would bid.
+const LOANSERVICING_KEYWORD_RULES = [
+  { term: "loan servicing", weight: 30, label: "Loan Servicing" },
+  { term: "mortgage servicing", weight: 25, label: "Mortgage Servicing" },
+  { term: "default servicing", weight: 20, label: "Default Servicing" },
+  { term: "escrow", weight: 15, label: "Escrow" },
+  { term: "consumer lending", weight: 15, label: "Consumer Lending" },
+  { term: "collections", weight: 15, label: "Collections" },
+  { term: "veteran", weight: 15, label: "Veteran-Focused" },
+];
+const MODMEDIATIONS_KEYWORD_RULES = [
+  { term: "alternative dispute resolution", weight: 30, label: "ADR" },
+  { term: "mediation", weight: 30, label: "Mediation" },
+  { term: "arbitration", weight: 25, label: "Arbitration" },
+  { term: "dispute resolution", weight: 20, label: "Dispute Resolution" },
+  { term: "neutral", weight: 10, label: "Neutral/Mediator" },
+];
+const NEWARKFIRM_KEYWORD_RULES = [
+  { term: "outside counsel", weight: 30, label: "Outside Counsel" },
+  { term: "attorney", weight: 25, label: "Attorney" },
+  { term: "general counsel", weight: 20, label: "General Counsel" },
+  { term: "counsel", weight: 15, label: "Counsel" },
+  { term: "legal services", weight: 20, label: "Legal Services" },
+  { term: "litigation support", weight: 20, label: "Litigation Support" },
+];
+
+const BUSINESS_KEYWORD_RULES = {
+  aegis: KEYWORD_RULES,
+  loanservicing: LOANSERVICING_KEYWORD_RULES,
+  modmediations: MODMEDIATIONS_KEYWORD_RULES,
+  newarkfirm: NEWARKFIRM_KEYWORD_RULES,
+};
+const BUSINESS_LABELS = {
+  aegis: "Aegis Global Holdings",
+  loanservicing: "Veteran Loan Servicing",
+  modmediations: "Mod Mediations",
+  newarkfirm: "Newark Firm",
+};
+
+function splitCsv(value) {
+  return (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// Maps a NAICS code back to the business whose SAM.gov search codes
+// (below) include it, so a fetched opportunity can be scored against the
+// right business's keyword rules. Codes not found here (shouldn't happen
+// since fetchOpportunities only ever searches codes drawn from these same
+// four vars) fall back to "aegis" to preserve the original single-business
+// behavior.
+function buildNaicsBusinessMap(env) {
+  const map = {};
+  for (const code of splitCsv(env.NAICS_CODES)) map[code] = "aegis";
+  for (const code of splitCsv(env.LOANSERVICING_NAICS_CODES)) map[code] = "loanservicing";
+  for (const code of splitCsv(env.MODMEDIATIONS_NAICS_CODES)) map[code] = "modmediations";
+  for (const code of splitCsv(env.NEWARKFIRM_NAICS_CODES)) map[code] = "newarkfirm";
+  return map;
+}
+
 // Weighted highest of any single rule: a veteran set-aside is a structural
 // bidding advantage (other bidders are excluded entirely), which matters
 // more for "will Aegis actually win this" than a generic keyword hit.
@@ -321,8 +386,8 @@ async function ingestAndNotify(env, allItems) {
       `INSERT INTO opportunities
         (notice_id, title, agency, notice_type, naics_code, set_aside, posted_date,
          response_deadline, sam_url, description_excerpt, score, matched_reasons,
-         respond_token, source, award_amount, company_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         respond_token, source, award_amount, company_key, business)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         item.id,
@@ -341,6 +406,7 @@ async function ingestAndNotify(env, allItems) {
         item.source,
         item.awardAmount,
         PROSPECT_SOURCES.includes(item.source) ? normalizeCompanyKey(item.title) : null,
+        item.business || "aegis",
       )
       .run();
 
@@ -454,6 +520,11 @@ async function ensureOutcomeColumns(env) {
     // that dedup window and, via the "I sent this" outcome action, as the
     // real start of the follow-up clock instead of the approval time).
     "ALTER TABLE opportunities ADD COLUMN company_key TEXT",
+    // Which of the four businesses (aegis/loanservicing/modmediations/
+    // newarkfirm) a sam_gov item was scored for. NULL/'aegis' for every
+    // pre-existing row and for every non-sam_gov source, matching the
+    // single-business behavior this column didn't previously need to track.
+    "ALTER TABLE opportunities ADD COLUMN business TEXT",
     "ALTER TABLE opportunities ADD COLUMN outreach_drafted_at TEXT",
     "CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)",
   ];
@@ -965,7 +1036,8 @@ async function handleIngestUsaSpending(request, env) {
 // ── Source 1: SAM.gov open solicitations ────────────────────────────────────
 
 async function scanSamGov(env) {
-  const naicsCodes = (env.NAICS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const naicsBusinessMap = buildNaicsBusinessMap(env);
+  const naicsCodes = Object.keys(naicsBusinessMap);
   const today = new Date();
   const twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
   const postedFrom = formatSamDate(twoDaysAgo);
@@ -984,6 +1056,10 @@ async function scanSamGov(env) {
     items.push({
       id: opp.noticeId,
       source: "sam_gov",
+      // The actual code SAM.gov returns for this notice, not necessarily
+      // the one it was found under -- falls back to "aegis" if it's not in
+      // any of the four business NAICS lists (shouldn't normally happen).
+      business: naicsBusinessMap[opp.naicsCode] || "aegis",
       title: opp.title || "(untitled)",
       agency: opp.fullParentPathName || opp.department || null,
       noticeType: opp.type || "Solicitation",
@@ -1215,8 +1291,9 @@ function scoreItem(item) {
   const haystack = `${item.title || ""} ${item.description || ""}`.toLowerCase();
   const reasons = new Set();
   let score = 0;
+  const rules = BUSINESS_KEYWORD_RULES[item.business] || KEYWORD_RULES;
 
-  for (const rule of KEYWORD_RULES) {
+  for (const rule of rules) {
     if (haystack.includes(rule.term)) {
       score += rule.weight;
       reasons.add(rule.label);
@@ -1248,7 +1325,7 @@ async function loadRespondRow(env, id, token) {
   const row = await env.DB
     .prepare(
       `SELECT respond_token, title, source, agency, description_excerpt, award_amount,
-              matched_reasons, sam_url, naics_code, set_aside
+              matched_reasons, sam_url, naics_code, set_aside, business
        FROM opportunities WHERE notice_id = ?`,
     )
     .bind(id)
@@ -1350,11 +1427,19 @@ async function draftSamGovChecklist(env, noticeId, title) {
 
   const checklist = await callAnthropicForChecklist(env, { title, description, opp });
 
-  const tokenRow = await env.DB.prepare("SELECT respond_token FROM opportunities WHERE notice_id = ?")
+  const row = await env.DB.prepare("SELECT respond_token, business FROM opportunities WHERE notice_id = ?")
     .bind(noticeId)
     .first();
 
-  await sendChecklistEmail(env, { title, noticeId, token: tokenRow?.respond_token, opp, resourceLinks, checklist });
+  await sendChecklistEmail(env, {
+    title,
+    noticeId,
+    token: row?.respond_token,
+    business: row?.business,
+    opp,
+    resourceLinks,
+    checklist,
+  });
 }
 
 async function callAnthropicForChecklist(env, { title, description, opp }) {
@@ -1415,10 +1500,11 @@ Respond with ONLY a raw JSON object, no markdown fences, no preamble:
   "openQuestions": ["anything a bidder would need to clarify because the text is ambiguous or silent on it"]
 }`;
 
-async function sendChecklistEmail(env, { title, noticeId, token, opp, resourceLinks, checklist }) {
+async function sendChecklistEmail(env, { title, noticeId, token, business, opp, resourceLinks, checklist }) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
   const samUrl = opp.uiLink || `https://sam.gov/workspace/contract/opp/${noticeId}/view`;
+  const businessLabel = BUSINESS_LABELS[business] || BUSINESS_LABELS.aegis;
   const sentLink = token
     ? `<p style="margin-top:20px"><a href="${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I submitted this bid — start tracking</a></p>`
     : "";
@@ -1443,7 +1529,7 @@ async function sendChecklistEmail(env, { title, noticeId, token, opp, resourceLi
   await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
-    subject: `Requirements checklist (AI draft) — ${title}`,
+    subject: `[${businessLabel}] Requirements checklist (AI draft) — ${title}`,
     html: `<div style="font-family:sans-serif;max-width:640px">
       <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
         ⚠ AI-drafted from the solicitation text. Not authoritative — verify every item against the actual document before relying on it.
@@ -1686,10 +1772,11 @@ async function sendDigestEmail(env, items) {
         item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
         "OPEN SOLICITATION";
+      const businessLabel = BUSINESS_LABELS[item.business] || BUSINESS_LABELS.aegis;
       return `
         <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
           <div style="font-size:12px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">
-            Score: ${item.score}/100 &nbsp;·&nbsp; ${sourceLabel}
+            Score: ${item.score}/100 &nbsp;·&nbsp; ${sourceLabel} &nbsp;·&nbsp; For: ${escHtml(businessLabel)}
           </div>
           <h3 style="margin:6px 0">${escHtml(item.title)}</h3>
           <p style="margin:4px 0;color:#555;font-size:14px">
