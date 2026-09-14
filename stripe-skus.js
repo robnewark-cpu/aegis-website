@@ -103,24 +103,6 @@ window.AEGIS_STRIPE_SKUS = {
     quantityAdjustable: false,
     url: "https://buy.stripe.com/14A4gB3BW5V1cfNfXgffy0j"
   },
-  practice: {
-    id: "practice",
-    name: "AegisOS - Practice Launch",
-    amount: 99,
-    display: "$99 / user / mo",
-    interval: "month",
-    quantityAdjustable: true,
-    url: "https://buy.stripe.com/14AbJ3goIabh2FdcL4ffy09"
-  },
-  professional: {
-    id: "professional",
-    name: "AegisOS - Professional",
-    amount: 189,
-    display: "$189 / user / mo",
-    interval: "month",
-    quantityAdjustable: true,
-    url: "https://buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a"
-  },
   lexflowSolo: {
     id: "lexflowSolo",
     name: "LexFlow Solo",

@@ -89,14 +89,17 @@ Do **not** reuse older Stripe links named All-in-one Care Plan, AI Search & Cont
 | 7 | Local Citation Building | $200 | One-time | Locked | `STRIPE_LINK_CITATIONS` | `citations` |
 | 8 | AegisPay Launch Pack | $1,500 | One-time | Locked | `STRIPE_LINK_AEGISPAY` | `aegispay` |
 | 9 | InventorOS Intake Pack | $249 | One-time | Locked | `STRIPE_LINK_INVENTOR` | `inventor` |
-| 10 | AegisOS - Practice Launch | $99 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PRACTICE` | `practice` | **LIVE** `buy.stripe.com/14AbJ3goIabh2FdcL4ffy09` |
-| 11 | AegisOS - Professional | $189 / user / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_PROFESSIONAL` | `professional` | **LIVE** `buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a` |
+| 10 | LexFlow Solo | $39 / mo | Recurring monthly | Locked | `STRIPE_LINK_LEXFLOW_SOLO` | `lexflowSolo` | **LIVE** `buy.stripe.com/dRm00l6O83MT1B99ySffy0m` |
+| 11 | LexFlow Professional | $99 / mo | Recurring monthly | Locked | `STRIPE_LINK_LEXFLOW_PROFESSIONAL` | `lexflowProfessional` | **LIVE** `buy.stripe.com/5kQ4gB8Wg4QX3Jh6mGffy0n` |
+| 12 | LexFlow Unlimited | $179 / mo | Recurring monthly | Locked | `STRIPE_LINK_LEXFLOW_UNLIMITED` | `lexflowUnlimited` | **LIVE** `buy.stripe.com/28E6oJa0k0AH0x526qffy0o` |
+| 13 | LexFlow Firm | $199 / seat / mo | Recurring monthly | Customers **can** adjust (seats) | `STRIPE_LINK_LEXFLOW_FIRM` | `lexflowFirm` | **LIVE** `buy.stripe.com/3cIaEZdcw1ELenV8uOffy0p` |
+| 14 | LexFlow Top-Up 200 | $15 | One-time | Locked | `STRIPE_LINK_LEXFLOW_TOPUP` | `lexflowTopup` | **LIVE** `buy.stripe.com/4gMfZj0pK0AH1B93auffy0q` |
 
-Rows 1–7 are consulting. Rows 8–11 are shipped AegisOS software. Rows 8–11 are **not** in the AI-scan email catalog.
+Rows 1–7 are consulting. Rows 8–14 are shipped AegisOS software. Rows 8–14 are **not** in the AI-scan email catalog.
 
 **Do not sell on a website Payment Link:** LoanServ (ACH not live — demo), Aegis Communications (metered after demo), AegisShield as an ATO (use the $3,000 kickoff), MedFlow / FinFlow / FlowServ / CounselAI / FinanceAI / HealthAI (not shipped), Enterprise seats (custom).
 
-Create **new** links for rows 8–11 even if older Practice Launch / Professional subscription URLs still exist. Product names must match the table exactly.
+The old "AegisOS - Practice Launch" ($99/user/mo) and "AegisOS - Professional" ($189/user/mo) subscription products, prices, and Payment Links have been deactivated in Stripe and consolidated into the LexFlow tiers above — do not recreate them.
 
 Until each URL is pasted into `stripe-skus.js`, the site shows **Request this** instead of **Pay** / **Subscribe**.
 
