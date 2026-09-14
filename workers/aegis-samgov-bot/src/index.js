@@ -275,11 +275,17 @@ async function runScan(env) {
     }
   }
 
-  const result = await ingestAndNotify(env, allItems, "sam.gov");
-  if (fetchErrors.length > 0 && env.RESEND_API_KEY && result.totalNew === 0) {
+  const result = await ingestAndNotify(env, allItems);
+  // Notify on ANY fetch error, not just when nothing at all was found --
+  // a SAM.gov-only failure used to go completely silent whenever Adzuna or
+  // USAJOBS still turned up something new that day, which could hide a
+  // real outage on one source for weeks. Confirmed missing items (in-range
+  // NAICS, verified fetchable via a direct API call) that never reached D1
+  // on days other sources kept a digest going -- this is why.
+  if (fetchErrors.length > 0 && env.RESEND_API_KEY) {
     await notifyRobert(env, {
-      subject: "Opportunity bot — fetch errors, nothing new found",
-      html: `<p>Errors: ${escHtml(fetchErrors.join("; "))}</p>`,
+      subject: `Opportunity bot — ${fetchErrors.length} source${fetchErrors.length === 1 ? "" : "s"} failed today`,
+      html: `<p>${result.totalNew} new item(s) were still found from other sources, but the following failed and were skipped entirely today:</p><ul>${fetchErrors.map((e) => `<li>${escHtml(e)}</li>`).join("")}</ul>`,
     });
   }
   return { ...result, fetchErrors };
