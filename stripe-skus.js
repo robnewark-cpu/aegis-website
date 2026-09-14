@@ -120,6 +120,51 @@ window.AEGIS_STRIPE_SKUS = {
     interval: "month",
     quantityAdjustable: true,
     url: "https://buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a"
+  },
+  lexflowSolo: {
+    id: "lexflowSolo",
+    name: "LexFlow Solo",
+    amount: 39,
+    display: "$39 / mo",
+    interval: "month",
+    quantityAdjustable: false,
+    url: "https://buy.stripe.com/dRm00l6O83MT1B99ySffy0m"
+  },
+  lexflowProfessional: {
+    id: "lexflowProfessional",
+    name: "LexFlow Professional",
+    amount: 99,
+    display: "$99 / mo",
+    interval: "month",
+    quantityAdjustable: false,
+    url: "https://buy.stripe.com/5kQ4gB8Wg4QX3Jh6mGffy0n"
+  },
+  lexflowUnlimited: {
+    id: "lexflowUnlimited",
+    name: "LexFlow Unlimited",
+    amount: 179,
+    display: "$179 / mo",
+    interval: "month",
+    quantityAdjustable: false,
+    url: "https://buy.stripe.com/28E6oJa0k0AH0x526qffy0o"
+  },
+  lexflowFirm: {
+    id: "lexflowFirm",
+    name: "LexFlow Firm",
+    amount: 199,
+    display: "$199 / seat / mo",
+    interval: "month",
+    quantityAdjustable: true,
+    url: "https://buy.stripe.com/3cIaEZdcw1ELenV8uOffy0p"
+  },
+  lexflowTopup: {
+    id: "lexflowTopup",
+    name: "LexFlow Top-Up 200",
+    amount: 15,
+    display: "$15",
+    interval: null,
+    quantityAdjustable: false,
+    url: "https://buy.stripe.com/4gMfZj0pK0AH1B93auffy0q"
   }
 };
 
