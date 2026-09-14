@@ -134,6 +134,7 @@ const OUTCOME_FIRST_CHECK_DAYS = 7;
 const OUTCOME_CHECK_INTERVAL_DAYS = 7;
 const OUTCOME_MAX_CHECKS = 4;
 const OUTCOME_ACTIONS = [
+  "sent",
   "won",
   "lost",
   "remind_later",
@@ -143,6 +144,11 @@ const OUTCOME_ACTIONS = [
   "meeting_cancelled",
 ];
 const OUTCOME_ACTIONS_NEEDING_DATE = ["schedule_meeting", "meeting_reschedule"];
+
+// Sources where approving triggers an outreach draft (Phase 2B) rather than
+// a requirements checklist (sam_gov, Phase 2A). Used both to route Approve
+// and to decide which rows participate in same-company-same-day dedup.
+const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal"];
 
 // Weekly pipeline summary, separate cron entry (see wrangler.jsonc). Mondays
 // 9am Central (14:00 UTC / 8am during CDT) -- same DST caveat as the daily
@@ -167,6 +173,12 @@ export default {
     if (request.method === "GET" && url.pathname === "/robots.txt") {
       return new Response("User-agent: *\nDisallow: /\n", { headers: { "Content-Type": "text/plain" } });
     }
+
+    // Every remaining route touches columns added by these migrations
+    // (reminders, outcome tracking, company dedup) -- run them up front so
+    // a route hit before the next cron cycle never sees "no such column".
+    await ensureReminderColumns(env);
+    await ensureOutcomeColumns(env);
 
     // GET only renders a confirmation page -- no side effect. Crawlers,
     // e-mail safe-link scanners (Outlook/Google prefetch every link in an
@@ -198,7 +210,6 @@ export default {
     // Manual trigger for testing follow-up reminders without waiting for
     // the cron or for REMINDER_FIRST_AFTER_DAYS to actually elapse.
     if (request.method === "GET" && url.pathname === "/send-reminders-now") {
-      await ensureReminderColumns(env);
       const result = await sendFollowUpReminders(env);
       return jsonResponse(result);
     }
@@ -206,7 +217,6 @@ export default {
     // Manual triggers for testing outcome tracking without waiting for the
     // cron or for the configured day thresholds to actually elapse.
     if (request.method === "GET" && url.pathname === "/check-outcomes-now") {
-      await ensureOutcomeColumns(env);
       const result = await checkOutcomes(env);
       return jsonResponse(result);
     }
@@ -305,8 +315,8 @@ async function ingestAndNotify(env, allItems) {
       `INSERT INTO opportunities
         (notice_id, title, agency, notice_type, naics_code, set_aside, posted_date,
          response_deadline, sam_url, description_excerpt, score, matched_reasons,
-         respond_token, source, award_amount)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         respond_token, source, award_amount, company_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         item.id,
@@ -324,6 +334,7 @@ async function ingestAndNotify(env, allItems) {
         token,
         item.source,
         item.awardAmount,
+        PROSPECT_SOURCES.includes(item.source) ? normalizeCompanyKey(item.title) : null,
       )
       .run();
 
@@ -432,6 +443,12 @@ async function ensureOutcomeColumns(env) {
     "ALTER TABLE opportunities ADD COLUMN outcome_check_count INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE opportunities ADD COLUMN outcome_check_sent_at TEXT",
     "ALTER TABLE opportunities ADD COLUMN meeting_check_sent_at TEXT",
+    // company_key backs the same-company-same-day outreach dedup check;
+    // outreach_drafted_at is when a draft actually went out (used both for
+    // that dedup window and, via the "I sent this" outcome action, as the
+    // real start of the follow-up clock instead of the approval time).
+    "ALTER TABLE opportunities ADD COLUMN company_key TEXT",
+    "ALTER TABLE opportunities ADD COLUMN outreach_drafted_at TEXT",
     "CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)",
   ];
   for (const sql of statements) {
@@ -535,6 +552,7 @@ async function renderOutcomeConfirmation(env, url) {
 
   const needsDate = OUTCOME_ACTIONS_NEEDING_DATE.includes(action);
   const label = {
+    sent: "I sent/submitted this — start tracking",
     won: "Mark as won — got the contract",
     lost: "Mark as declined",
     remind_later: "Remind me later",
@@ -579,19 +597,23 @@ async function handleOutcome(env, request, ctx) {
   const now = new Date().toISOString();
   let extra = "";
 
-  if (action === "won") {
+  if (action === "sent" || action === "remind_later") {
+    // "sent" starts the tracking clock from when Robert actually sent/
+    // submitted it (more accurate than approval time, since he may not
+    // send it the same day he approves it). "remind_later" re-anchors the
+    // same clock after a snooze. Same DB effect either way.
+    await env.DB.prepare(
+      "UPDATE opportunities SET outcome = 'pending', outcome_check_sent_at = ?, outcome_updated_at = ? WHERE notice_id = ?",
+    )
+      .bind(now, now, id)
+      .run();
+  } else if (action === "won") {
     await env.DB.prepare("UPDATE opportunities SET outcome = 'won', outcome_updated_at = ? WHERE notice_id = ?")
       .bind(now, id)
       .run();
   } else if (action === "lost" || action === "meeting_cancelled") {
     await env.DB.prepare("UPDATE opportunities SET outcome = 'lost', outcome_updated_at = ? WHERE notice_id = ?")
       .bind(now, id)
-      .run();
-  } else if (action === "remind_later") {
-    await env.DB.prepare(
-      "UPDATE opportunities SET outcome = 'pending', outcome_check_sent_at = ?, outcome_updated_at = ? WHERE notice_id = ?",
-    )
-      .bind(now, now, id)
       .run();
   } else if (action === "schedule_meeting" || action === "meeting_reschedule") {
     await env.DB.prepare(
@@ -616,6 +638,7 @@ async function handleOutcome(env, request, ctx) {
   }
 
   const summary = {
+    sent: "pending — tracking started, we'll check in soon",
     won: "won",
     lost: "declined",
     remind_later: "pending — we'll ask again later",
@@ -1276,7 +1299,6 @@ async function handleRespond(env, request, ctx) {
     .run();
 
   let extra = "";
-  const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal"];
   if (action === "approve" && env.ANTHROPIC_API_KEY) {
     if (row.source === "sam_gov") {
       ctx.waitUntil(
@@ -1286,8 +1308,12 @@ async function handleRespond(env, request, ctx) {
       );
       extra = " Drafting a requirements checklist now — check your e-mail in about a minute.";
     } else if (PROSPECT_SOURCES.includes(row.source)) {
+      // draftOutreachEmail itself checks for other same-company approvals
+      // already drafted today and, if found, merges them into one combined
+      // e-mail instead of sending two separate pitches to the same company
+      // on the same day.
       ctx.waitUntil(
-        draftOutreachEmail(env, row).catch((err) =>
+        draftOutreachEmail(env, id, row).catch((err) =>
           console.error("[aegis-samgov-bot] Outreach draft failed:", err.message),
         ),
       );
@@ -1318,7 +1344,11 @@ async function draftSamGovChecklist(env, noticeId, title) {
 
   const checklist = await callAnthropicForChecklist(env, { title, description, opp });
 
-  await sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, checklist });
+  const tokenRow = await env.DB.prepare("SELECT respond_token FROM opportunities WHERE notice_id = ?")
+    .bind(noticeId)
+    .first();
+
+  await sendChecklistEmail(env, { title, noticeId, token: tokenRow?.respond_token, opp, resourceLinks, checklist });
 }
 
 async function callAnthropicForChecklist(env, { title, description, opp }) {
@@ -1379,10 +1409,13 @@ Respond with ONLY a raw JSON object, no markdown fences, no preamble:
   "openQuestions": ["anything a bidder would need to clarify because the text is ambiguous or silent on it"]
 }`;
 
-async function sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, checklist }) {
+async function sendChecklistEmail(env, { title, noticeId, token, opp, resourceLinks, checklist }) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
   const samUrl = opp.uiLink || `https://sam.gov/workspace/contract/opp/${noticeId}/view`;
+  const sentLink = token
+    ? `<p style="margin-top:20px"><a href="${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I submitted this bid — start tracking</a></p>`
+    : "";
 
   const bodyHtml = checklist.parseError
     ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
@@ -1413,8 +1446,9 @@ async function sendChecklistEmail(env, { title, noticeId, opp, resourceLinks, ch
       <p><a href="${escHtml(samUrl)}">View on SAM.gov</a></p>
       ${bodyHtml}
       ${linksHtml}
+      ${sentLink}
     </div>`,
-    text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}`,
+    text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}${token ? `\n\nI submitted this: ${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent` : ""}`,
   });
 }
 
@@ -1437,24 +1471,67 @@ const AEGIS_SERVICES_CONTEXT = `\
 - Website Migration & Redesign ($3,000): marketing-site build
 - LexFlow (part of AegisOS): legal practice management software -- client/matter records, trust/IOLTA foundation, billing`;
 
-async function draftOutreachEmail(env, row) {
-  const reasons = JSON.parse(row.matched_reasons || "[]");
-  const isLegal = row.source === "adzuna_legal" || row.source === "usajobs_legal";
-
-  const context = [
-    `Source: ${row.source}`,
-    `Title/company line as recorded: ${row.title}`,
-    row.agency ? `Location/agency: ${row.agency}` : null,
-    row.award_amount ? `Award amount: $${Math.round(row.award_amount).toLocaleString()}` : null,
+function describeOpportunity(r) {
+  const reasons = JSON.parse(r.matched_reasons || "[]");
+  return [
+    `Source: ${r.source}`,
+    `Title/company line as recorded: ${r.title}`,
+    r.agency ? `Location/agency: ${r.agency}` : null,
+    r.award_amount ? `Award amount: $${Math.round(r.award_amount).toLocaleString()}` : null,
     `Why this matched Aegis's criteria: ${reasons.join(", ") || "none recorded"}`,
-    `Excerpt of the original posting/contract description: ${row.description_excerpt || "(none captured)"}`,
-    row.sam_url ? `Source link: ${row.sam_url}` : null,
+    `Excerpt of the original posting/contract description: ${r.description_excerpt || "(none captured)"}`,
+    r.sam_url ? `Source link: ${r.sam_url}` : null,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+async function draftOutreachEmail(env, id, row) {
+  const isLegal = row.source === "adzuna_legal" || row.source === "usajobs_legal";
+  const companyKey = normalizeCompanyKey(row.title);
+
+  // If another lead for the same company already got an outreach draft
+  // today, pull it in and write ONE combined e-mail instead of sending the
+  // same company two separate pitches on the same day. Only merges across
+  // rows with the same isLegal-ness -- a Newark Firm B2B pitch and an Aegis
+  // consulting pitch are different senders/framings and must stay separate.
+  let siblings = [];
+  if (companyKey) {
+    const { results } = await env.DB.prepare(
+      `SELECT notice_id, title, source, agency, award_amount, matched_reasons, description_excerpt, sam_url
+       FROM opportunities
+       WHERE company_key = ? AND notice_id != ? AND outreach_drafted_at IS NOT NULL
+         AND date(outreach_drafted_at) = date('now')`,
+    )
+      .bind(companyKey, id)
+      .all();
+    siblings = (results || []).filter(
+      (r) => (r.source === "adzuna_legal" || r.source === "usajobs_legal") === isLegal,
+    );
+  }
+
+  const allOpportunities = [row, ...siblings];
+  const context =
+    allOpportunities.length > 1
+      ? allOpportunities.map((r, i) => `--- Opportunity ${i + 1} of ${allOpportunities.length} ---\n${describeOpportunity(r)}`).join("\n\n")
+      : describeOpportunity(row);
 
   const draft = await callAnthropicForOutreach(env, { context, isLegal });
-  await sendOutreachDraftEmail(env, { row, draft, isLegal });
+  await sendOutreachDraftEmail(env, {
+    row,
+    id,
+    draft,
+    isLegal,
+    combinedWith: siblings.map((s) => s.title),
+  });
+
+  const now = new Date().toISOString();
+  await env.DB.prepare("UPDATE opportunities SET outreach_drafted_at = ? WHERE notice_id = ?").bind(now, id).run();
+  for (const s of siblings) {
+    await env.DB.prepare("UPDATE opportunities SET outreach_drafted_at = ? WHERE notice_id = ?")
+      .bind(now, s.notice_id)
+      .run();
+  }
 }
 
 // Newark Firm is a general-practice law firm -- do not claim any specialty
@@ -1474,6 +1551,8 @@ TONE AND STYLE -- formal attorney-to-attorney correspondence:
 - No hype, no false familiarity, no filler transitions ("So," "Also," "Just wanted to...").
 - Structure: one sentence of factual context (why you are writing) -> one sentence introducing Newark Firm as a general-practice firm -> the specific type of B2B relationship being proposed -> a single, low-pressure next step (e.g., a brief call) -> a brief, courteous closing sentence. No signature block.
 - 100-160 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME organization -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together. Never claim more signals exist than are actually listed.
 
 Respond with ONLY a raw JSON object, no markdown fences:
 {
@@ -1499,6 +1578,8 @@ TONE AND STYLE -- formal business-development correspondence, not a casual cold 
 - Precise, declarative sentences. Assume the recipient is a senior decision-maker with little time.
 - Structure: one sentence of factual context (why you are writing) -> one sentence introducing Aegis Global Holdings -> the specific service and price -> a single, low-pressure next step -> a brief, courteous closing sentence. No signature block.
 - 120-180 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME company -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together. Still recommend only ONE Aegis service overall unless two are both clearly and separately justified. Never claim more signals exist than are actually listed.
 
 Respond with ONLY a raw JSON object, no markdown fences:
 {
@@ -1534,7 +1615,7 @@ Respond with ONLY a raw JSON object, no markdown fences:
   }
 }
 
-async function sendOutreachDraftEmail(env, { row, draft, isLegal }) {
+async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, combinedWith = [] }) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
 
@@ -1544,12 +1625,20 @@ async function sendOutreachDraftEmail(env, { row, draft, isLegal }) {
        </p>`
     : "";
 
+  const combinedBanner = combinedWith.length
+    ? `<p style="background:#eef7ee;border-left:3px solid #2e7d32;padding:12px 16px;font-size:13px">
+         🔗 Combined: this covers ${combinedWith.length + 1} approved leads for what looks like the same company today, including "${escHtml(combinedWith.join('", "'))}". Use this one e-mail, not a separate draft per lead.
+       </p>`
+    : "";
+
   const draftHtml = draft.parseError
     ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
        <pre style="white-space:pre-wrap;font-size:13px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(draft.raw)}</pre>`
     : `
       <p><strong>Suggested subject:</strong> ${escHtml(draft.subject || "")}</p>
       <div style="background:#f9f9f9;border:1px solid #ddd;padding:16px;white-space:pre-wrap;font-family:sans-serif">${escHtml(draft.body || "")}</div>`;
+
+  const sentUrl = `${WORKER_URL}/outcome?id=${encodeURIComponent(id)}&token=${row.respond_token}&action=sent`;
 
   await sendViaResend(env.RESEND_API_KEY, {
     from,
@@ -1561,11 +1650,13 @@ async function sendOutreachDraftEmail(env, { row, draft, isLegal }) {
         find the right recipient yourself before using this. Verify the claims against the source link below.
       </p>
       ${senderBanner}
+      ${combinedBanner}
       <h2>${escHtml(row.title)}</h2>
       ${row.sam_url ? `<p><a href="${escHtml(row.sam_url)}">Source link</a></p>` : ""}
       ${draftHtml}
+      <p style="margin-top:20px"><a href="${sentUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I sent this — start tracking</a></p>
     </div>`,
-    text: `${isLegal ? "NEWARK FIRM DRAFT -- send from robert@newarkfirm.com, not Aegis.\n\n" : ""}AI-drafted outreach e-mail for: ${row.title}\n(NOT sent -- no contact info available, find the recipient yourself.)\n\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}`,
+    text: `${isLegal ? "NEWARK FIRM DRAFT -- send from robert@newarkfirm.com, not Aegis.\n\n" : ""}${combinedWith.length ? `Combined with: ${combinedWith.join(", ")}\n\n` : ""}AI-drafted outreach e-mail for: ${row.title}\n(NOT sent -- no contact info available, find the recipient yourself.)\n\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}\n\nI sent this: ${sentUrl}`,
   });
 }
 
@@ -1724,6 +1815,16 @@ function formatSamDate(d) {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
+
+// Every prospect-source title is built as "${company} — ${rest}" by
+// mapUsaSpendingResults/mapAdzunaResult/mapUsaJobsResult -- split on that
+// same em dash to get a normalized dedup key, no separate company field
+// needed.
+function normalizeCompanyKey(title) {
+  if (!title) return null;
+  const key = title.split(" — ")[0]?.trim().toLowerCase();
+  return key || null;
+}
 
 function truncate(str, n) {
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
