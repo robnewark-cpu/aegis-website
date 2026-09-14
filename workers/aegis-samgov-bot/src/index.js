@@ -39,6 +39,13 @@
  * name, so this is a DRAFT ONLY, e-mailed to Robert — never auto-sent to
  * the prospect. Robert finds the real recipient and sends it himself.
  *
+ * Follow-up reminders: a qualifying item that sits at status='new' (never
+ * approved/declined/saved) gets re-e-mailed REMINDER_FIRST_AFTER_DAYS after
+ * it was first flagged, then every REMINDER_INTERVAL_DAYS after that, up to
+ * REMINDER_MAX_COUNT times — same Approve/Decline/Save links, still valid.
+ * Runs as part of the daily cron, right after the scan. Items whose
+ * response_deadline has already passed are excluded (nothing to act on).
+ *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
  *   SAM_API_KEY      — free key from sam.gov -> Account Details -> Request API Key
  *   RESEND_API_KEY   — same Resend account used by the other Aegis workers
@@ -95,6 +102,15 @@ const KEYWORD_RULES = [
 const VETERAN_SET_ASIDE_WEIGHT = 35;
 const VETERAN_SET_ASIDE_CODES = ["SDVOSBC", "SDVOSBS", "VSA", "VSS"];
 
+// Follow-up reminders for qualifying items nobody has approved/declined/
+// saved yet. First nudge REMINDER_FIRST_AFTER_DAYS after the item was
+// first flagged; repeat every REMINDER_INTERVAL_DAYS after that; stop
+// after REMINDER_MAX_COUNT nudges so this never turns into permanent spam
+// for a lead Robert has consciously decided to just leave sitting.
+const REMINDER_FIRST_AFTER_DAYS = 3;
+const REMINDER_INTERVAL_DAYS = 3;
+const REMINDER_MAX_COUNT = 3;
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -129,6 +145,14 @@ export default {
       return jsonResponse(result);
     }
 
+    // Manual trigger for testing follow-up reminders without waiting for
+    // the cron or for REMINDER_FIRST_AFTER_DAYS to actually elapse.
+    if (request.method === "GET" && url.pathname === "/send-reminders-now") {
+      await ensureReminderColumns(env);
+      const result = await sendFollowUpReminders(env);
+      return jsonResponse(result);
+    }
+
     // Receives raw USASpending.gov results fetched by the GitHub Actions
     // workflow (Workers can't reach that domain directly — see file header).
     if (request.method === "POST" && url.pathname === "/ingest-usaspending") {
@@ -139,7 +163,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runScan(env));
+    ctx.waitUntil(runDailyJobs(env));
   },
 };
 
@@ -247,6 +271,86 @@ async function ingestAndNotify(env, allItems) {
   }
 
   return { totalSeen, totalNew, qualifying: newQualifying.length };
+}
+
+// ── Daily cron orchestration ─────────────────────────────────────────────
+
+async function runDailyJobs(env) {
+  await ensureReminderColumns(env);
+  await runScan(env);
+  await sendFollowUpReminders(env);
+}
+
+// ── Follow-up reminders ──────────────────────────────────────────────────
+
+// Idempotent — safe to call every day. D1 has no ALTER TABLE ... IF NOT
+// EXISTS, so we just try the ALTER and swallow "duplicate column".
+async function ensureReminderColumns(env) {
+  const statements = [
+    // Belt-and-suspenders: add created_at too, in case the original table
+    // doesn't have it — the reminder query needs a "first seen" timestamp
+    // to measure days pending against.
+    "ALTER TABLE opportunities ADD COLUMN created_at TEXT DEFAULT (datetime('now'))",
+    "ALTER TABLE opportunities ADD COLUMN reminder_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE opportunities ADD COLUMN last_reminded_at TEXT",
+  ];
+  for (const sql of statements) {
+    try {
+      await env.DB.prepare(sql).run();
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message)) throw err;
+    }
+  }
+}
+
+async function sendFollowUpReminders(env) {
+  if (!env.RESEND_API_KEY) return { remindersSent: 0 };
+
+  const threshold = Number(env.SCORE_THRESHOLD || "20");
+  const { results } = await env.DB.prepare(
+    `SELECT notice_id, title, agency, source, score, matched_reasons, respond_token,
+            sam_url, response_deadline, reminder_count, created_at
+     FROM opportunities
+     WHERE status = 'new'
+       AND score >= ?
+       AND reminder_count < ?
+       AND (julianday('now') - julianday(created_at)) >= ?
+       AND (last_reminded_at IS NULL OR (julianday('now') - julianday(last_reminded_at)) >= ?)
+       AND (response_deadline IS NULL OR response_deadline = '' OR date(response_deadline) >= date('now'))
+     ORDER BY score DESC`,
+  )
+    .bind(threshold, REMINDER_MAX_COUNT, REMINDER_FIRST_AFTER_DAYS, REMINDER_INTERVAL_DAYS)
+    .all();
+
+  const rows = results || [];
+  if (rows.length === 0) return { remindersSent: 0 };
+
+  const items = rows.map((row) => ({
+    id: row.notice_id,
+    token: row.respond_token,
+    title: row.title,
+    agency: row.agency,
+    source: row.source,
+    score: row.score,
+    reasons: JSON.parse(row.matched_reasons || "[]"),
+    url: row.sam_url,
+    responseDeadline: row.response_deadline,
+    daysPending: Math.floor((Date.now() - new Date(row.created_at).getTime()) / 86400000),
+    reminderNumber: row.reminder_count + 1,
+  }));
+
+  await sendReminderDigestEmail(env, items);
+
+  const now = new Date().toISOString();
+  for (const item of items) {
+    await env.DB.prepare(
+      "UPDATE opportunities SET reminder_count = reminder_count + 1, last_reminded_at = ? WHERE notice_id = ?",
+    )
+      .bind(now, item.id)
+      .run();
+  }
+
+  return { remindersSent: items.length };
 }
 
 // ── USASpending ingest endpoint (called by GitHub Actions) ─────────────────
@@ -978,6 +1082,66 @@ async function sendDigestEmail(env, items) {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     console.error(`[aegis-samgov-bot] Digest e-mail failed ${res.status}:`, body);
+  }
+}
+
+async function sendReminderDigestEmail(env, items) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const cardsHtml = items
+    .map((item) => {
+      const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve`;
+      const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=decline`;
+      const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=save`;
+      const sourceLabel =
+        item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
+        item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
+        item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
+        item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
+        "OPEN SOLICITATION";
+      return `
+        <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
+          <div style="font-size:12px;font-weight:700;color:#856404;text-transform:uppercase;letter-spacing:.08em">
+            Score: ${item.score}/100 &nbsp;·&nbsp; ${sourceLabel} &nbsp;·&nbsp; Pending ${item.daysPending} day${item.daysPending === 1 ? "" : "s"} &nbsp;·&nbsp; Reminder ${item.reminderNumber}/${REMINDER_MAX_COUNT}
+          </div>
+          <h3 style="margin:6px 0">${escHtml(item.title)}</h3>
+          <p style="margin:4px 0;color:#555;font-size:14px">${item.agency ? escHtml(item.agency) : ""}</p>
+          <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${item.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
+          <p style="margin:8px 0;font-size:14px">
+            ${item.url ? `<a href="${escHtml(item.url)}">View original</a>` : ""}
+            ${item.responseDeadline ? ` · Response due: ${escHtml(item.responseDeadline)}` : ""}
+          </p>
+          <div style="margin-top:12px">
+            <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
+            <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
+            <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  const res = await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `Reminder: ${items.length} valuable lead${items.length === 1 ? "" : "s"} still waiting on your review`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <h2>Still sitting unreviewed</h2>
+      <p style="color:#555">These scored at or above your threshold and haven't been approved, declined, or saved yet. Each has been flagged before — this is a nudge, not a new item. Reminders stop after ${REMINDER_MAX_COUNT} per item, or as soon as you act on it.</p>
+      ${cardsHtml}
+    </div>`,
+    text: items
+      .map(
+        (item) =>
+          `[${item.score}/100] ${item.title} — pending ${item.daysPending} days (reminder ${item.reminderNumber}/${REMINDER_MAX_COUNT})\nWhy: ${item.reasons.join(", ")}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`,
+      )
+      .join("\n\n"),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[aegis-samgov-bot] Reminder e-mail failed ${res.status}:`, body);
   }
 }
 
