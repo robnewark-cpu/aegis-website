@@ -1,0 +1,78 @@
+name: Deploy Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "workers/aegis-form-worker/**"
+      - "workers/aegis-stripe-webhook/**"
+      - "workers/aegis-samgov-bot/**"
+      - ".github/workflows/deploy-workers.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: "workers-production"
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      form_worker: ${{ steps.filter.outputs.form_worker }}
+      stripe_webhook: ${{ steps.filter.outputs.stripe_webhook }}
+      samgov_bot: ${{ steps.filter.outputs.samgov_bot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            form_worker:
+              - 'workers/aegis-form-worker/**'
+            stripe_webhook:
+              - 'workers/aegis-stripe-webhook/**'
+            samgov_bot:
+              - 'workers/aegis-samgov-bot/**'
+
+  deploy-form-worker:
+    needs: changes
+    if: needs.changes.outputs.form_worker == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy aegis-form-worker to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/aegis-form-worker
+          command: deploy
+
+  deploy-stripe-webhook:
+    needs: changes
+    if: needs.changes.outputs.stripe_webhook == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy aegis-stripe-webhook to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/aegis-stripe-webhook
+          command: deploy
+
+  deploy-samgov-bot:
+    needs: changes
+    if: needs.changes.outputs.samgov_bot == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy aegis-samgov-bot to production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/aegis-samgov-bot
+          command: deploy
