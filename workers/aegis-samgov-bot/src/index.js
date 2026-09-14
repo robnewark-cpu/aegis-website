@@ -677,13 +677,13 @@ async function renderOutcomeConfirmation(env, url) {
   }[action];
 
   return htmlResponse(
-    `<h2>${escHtml(label)}?</h2>
-     <p>"${escHtml(row.title)}"</p>
+    `<h2 style="margin:0 0 12px">${escHtml(label)}?</h2>
+     <div style="border:1px solid #e0e0e0;border-radius:6px;padding:16px;margin-bottom:20px;color:#333">${escHtml(row.title)}</div>
      <form method="post" action="/outcome">
        <input type="hidden" name="id" value="${escHtml(id)}">
        <input type="hidden" name="token" value="${escHtml(token)}">
        <input type="hidden" name="action" value="${escHtml(action)}">
-       ${needsDate ? `<p><label>Meeting date: <input type="date" name="meeting_date" required></label></p>` : ""}
+       ${needsDate ? `<p><label>Meeting date: <input type="date" name="meeting_date" required style="margin-left:8px;padding:6px 8px"></label></p>` : ""}
        <button type="submit" style="background:#0E141B;color:#fff;padding:10px 20px;border:none;border-radius:4px;font-size:15px;cursor:pointer">Confirm</button>
      </form>`,
     200,
@@ -762,7 +762,14 @@ async function handleOutcome(env, request, ctx) {
     meeting_cancelled: "declined (meeting did not occur)",
   }[action];
 
-  return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${escHtml(summary)}</strong>.${extra}`, 200);
+  return htmlResponse(
+    `<h2 style="margin:0 0 12px">✓ Done</h2>
+     <div style="border:1px solid #e0e0e0;border-radius:6px;padding:16px;color:#333">
+       <div style="margin-bottom:8px">${escHtml(row.title)}</div>
+       <div>Marked as <strong>${escHtml(summary)}</strong>.${extra}</div>
+     </div>`,
+    200,
+  );
 }
 
 // ── Phase 2C: AI-drafted meeting follow-up e-mail ───────────────────────────
@@ -1450,8 +1457,8 @@ async function renderRespondConfirmation(env, url) {
 
   const verb = action === "approve" ? "Approve" : action === "decline" ? "Decline" : "Save for later";
   return htmlResponse(
-    `<h2>${verb}?</h2>
-     <p>"${escHtml(row.title)}"</p>
+    `<h2 style="margin:0 0 12px">${verb}?</h2>
+     <div style="border:1px solid #e0e0e0;border-radius:6px;padding:16px;margin-bottom:20px;color:#333">${escHtml(row.title)}</div>
      <form method="post" action="/respond">
        <input type="hidden" name="id" value="${escHtml(id)}">
        <input type="hidden" name="token" value="${escHtml(token)}">
@@ -1504,7 +1511,14 @@ async function handleRespond(env, request, ctx) {
     }
   }
 
-  return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${status}</strong>.${extra}`, 200);
+  return htmlResponse(
+    `<h2 style="margin:0 0 12px">✓ Done</h2>
+     <div style="border:1px solid #e0e0e0;border-radius:6px;padding:16px;color:#333">
+       <div style="margin-bottom:8px">${escHtml(row.title)}</div>
+       <div>Marked as <strong>${escHtml(status)}</strong>.${extra}</div>
+     </div>`,
+    200,
+  );
 }
 
 // ── Phase 2A: AI-drafted requirements checklist on Approve (sam_gov only) ──
@@ -2043,6 +2057,19 @@ async function notifyRobert(env, { subject, html }) {
 }
 
 function sendViaResend(apiKey, payload) {
+  // Every caller passes an html field that's just a <div>...</div> fragment
+  // with no declared charset. Wrapping it here (one place) instead of at
+  // each of the ~10 call sites means every e-mail this bot sends -- digest,
+  // reminders, outcome/meeting check-ins, checklist, outreach, tracking
+  // summary -- gets a real charset declaration, not just whichever ones
+  // someone remembered to fix. Missing it is what caused an em dash to
+  // render as "â€”" (mojibake) instead of "—" in what Robert saw.
+  if (payload.html) {
+    payload = {
+      ...payload,
+      html: `<!doctype html><html><head><meta charset="utf-8"></head><body>${payload.html}</body></html>`,
+    };
+  }
   return fetch(RESEND_API, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -2078,10 +2105,19 @@ function jsonResponse(body, status = 200) {
 }
 
 function htmlResponse(message, status) {
-  return new Response(`<!doctype html><html><body style="font-family:sans-serif;padding:40px">${message}</body></html>`, {
-    status,
-    headers: { "Content-Type": "text/html" },
-  });
+  // The missing charset here (Content-Type had no "; charset=utf-8") was a
+  // real bug, not cosmetic: without it, a browser can fall back to
+  // guessing the page's encoding, and any em dash or curly quote in a
+  // title (both used throughout this bot's titles/labels) renders as
+  // mojibake like "â€”" instead of "—". Confirmed and fixed after Robert
+  // saw exactly that on a /respond confirmation page.
+  return new Response(
+    `<!doctype html><html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;padding:40px;max-width:520px;margin:0 auto">${message}</body></html>`,
+    {
+      status,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    },
+  );
 }
 
 function escHtml(str) {
