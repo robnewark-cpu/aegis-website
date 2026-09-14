@@ -8,7 +8,10 @@
   // hourly polling, and daily keeps well under any rate limit. Change the
   // cron string below if you want a different cadence.
   "triggers": {
-    "crons": ["0 13 * * *"] // 13:00 UTC = 8am America/Chicago (7am during DST)
+    "crons": [
+      "0 13 * * *", // Daily scan + reminders + outcome checks. 13:00 UTC = 8am America/Chicago (7am during DST)
+      "0 14 * * 1"  // Weekly pipeline tracking summary, Mondays. Must match WEEKLY_SUMMARY_CRON in src/index.js.
+    ]
   },
 
   "d1_databases": [
