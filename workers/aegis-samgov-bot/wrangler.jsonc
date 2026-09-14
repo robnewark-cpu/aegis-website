@@ -48,7 +48,14 @@
     // real cloud/IT-support solicitations (Navy Enterprise Cloud Support
     // Services, DHS "Cumulus" multi-award cloud solicitation) were filed
     // under it and completely invisible to the bot under the original list.
-    "NAICS_CODES": "541511,541512,541519,541611,541618,541690,518210",
+    // 522320 (Financial Transactions Processing, Reserve, and Clearinghouse
+    // Activities) added for AegisPay -- confirmed a valid code but 0 hits
+    // even over a 2.5-month window; genuinely low-volume on SAM.gov, not
+    // a bug. AegisPay is an Aegis product, not a separate business, so it
+    // stays in this list and scores against Aegis's own keyword rules
+    // (new "payment processing"/"billing system" terms below) rather than
+    // getting its own business bucket.
+    "NAICS_CODES": "541511,541512,541519,541611,541618,541690,518210,522320",
 
     // Robert's three other businesses, each with their own NAICS codes and
     // (in src/index.js) their own keyword scoring rules -- results land in
