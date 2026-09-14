@@ -48,6 +48,16 @@ Allow: /
 User-agent: Amazonbot
 Allow: /
 
+# robots.txt for aegisglobalholdings.com (GitHub Pages)
+# Last updated: Sept 14, 2026
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://aegisglobalholdings.com/sitemap.xml
+
+
 Sitemap: https://aegisglobalholdings.com/sitemap.xml
 # Machine-readable company facts for AI assistants: https://aegisglobalholdings.com/llms.txt
 # Conversion router for humans and assistants: https://aegisglobalholdings.com/get-started.html
