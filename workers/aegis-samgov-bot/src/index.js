@@ -455,6 +455,17 @@ async function ingestAndNotify(env, allItems) {
   }
 
   if (newQualifying.length > 0 && env.RESEND_API_KEY) {
+    // Only qualifying items get an AI summary -- these already passed the
+    // score threshold, so the volume is small and bounded, unlike scoring
+    // every item seen.
+    if (env.ANTHROPIC_API_KEY) {
+      for (const item of newQualifying) {
+        item.aiSummary = await summarizeForDigest(env, item).catch((err) => {
+          console.error("[aegis-samgov-bot] Digest summary failed:", err.message);
+          return null;
+        });
+      }
+    }
     await sendDigestEmail(env, newQualifying);
   }
 
@@ -1702,6 +1713,77 @@ const AEGIS_SERVICES_CONTEXT = `\
 - Website Migration & Redesign ($3,000): marketing-site build
 - LexFlow (part of AegisOS): legal practice management software -- client/matter records, trust/IOLTA foundation, billing`;
 
+// ── Digest-time AI summary (qualifying items only) ──────────────────────────
+//
+// Robert's complaint: the digest's "Why matched" tags are real substring
+// hits (kept, still auditable), but a boilerplate mention of a term like
+// "fedramp" tells him nothing about what the solicitation actually asks
+// for -- he was seeing the same keyword tag on unrelated opportunities and
+// couldn't judge relevance without opening each one. This adds one
+// strictly-grounded sentence on the actual ask, plus (Aegis items only)
+// which real services could apply, plus a standing reminder to always
+// consider offering the free AI Visibility Scan -- his own explicit ask,
+// applied here since this note is internal (to Robert), never sent to a
+// prospect, so it's safe regardless of which business the lead is for.
+const DIGEST_SUMMARY_SYSTEM = `\
+You are writing a SHORT internal note for Robert (the business owner) inside a daily lead digest, so he can judge relevance before deciding whether to approve a lead -- this note is never sent to anyone outside his own inbox.
+
+STRICT GROUNDING RULE: describe only what the text literally says is being requested or sought. Never infer scope, budget, or requirements the text doesn't state. If the excerpt is too thin to say anything specific, say that plainly instead of guessing.
+
+{{SERVICE_INSTRUCTION}}
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "summary": "1-2 sentences, plain language, on what is literally being requested -- not a restatement of the keyword tags",
+  "relevantServices": ["real service name from the list above that plausibly applies, or an empty array if none do -- never invent one"]
+}`;
+
+async function summarizeForDigest(env, item) {
+  const business = item.business || "aegis";
+  const isAegis = business === "aegis";
+  const serviceInstruction = isAegis
+    ? `If a real Aegis service below plausibly applies, name it in relevantServices (never invent a service or price not on this list; leave the array empty if none genuinely fit):\n${AEGIS_SERVICES_CONTEXT}`
+    : `This lead was scored for ${BUSINESS_IDENTITY[business] || BUSINESS_IDENTITY.aegis}, not Aegis Global Holdings -- leave relevantServices empty; do not invent or list Aegis services for it.`;
+  const system = DIGEST_SUMMARY_SYSTEM.replace("{{SERVICE_INSTRUCTION}}", serviceInstruction);
+
+  const context = [
+    `Business this was scored for: ${BUSINESS_LABELS[business] || BUSINESS_LABELS.aegis}`,
+    `Title: ${item.title}`,
+    item.agency ? `Agency/location: ${item.agency}` : null,
+    `Why this matched: ${item.reasons?.join(", ") || "none recorded"}`,
+    `Excerpt: ${truncate(item.description || "(no description captured)", 1500)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-5",
+      max_tokens: 1024,
+      system,
+      messages: [{ role: "user", content: context }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const raw = data.content?.find((b) => b.type === "text")?.text ?? "";
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+}
+
 function describeOpportunity(r) {
   const reasons = JSON.parse(r.matched_reasons || "[]");
   return [
@@ -1786,11 +1868,11 @@ STRICT GROUNDING RULE: use only the facts given below about the recipient (compa
 
 CONTEXT FOR THE PITCH: the recipient organization appears to be hiring for an attorney/counsel role, based on a public job posting. Robert is not applying for that job and is not a candidate. He is proposing that Newark Firm and the recipient explore a business-to-business legal relationship -- for example, referral arrangements, overflow or outside-counsel capacity for matters beyond their team's current bandwidth, or general local counsel support. Frame this as one general practice firm reaching out to another legal department/firm professionally, not as a vendor pitch.
 
-TONE AND STYLE -- formal attorney-to-attorney correspondence:
+TONE AND STYLE -- formal attorney-to-attorney correspondence that reads like a specific person wrote it, not a template:
 - No standalone greeting like "Hello," or "Hi," on its own line -- open with a formal salutation ("Dear [Company] Legal Team," or similar) or begin directly with the context sentence.
 - No contractions anywhere (write "that is" not "that's", "we do not" not "we don't").
-- No hype, no false familiarity, no filler transitions ("So," "Also," "Just wanted to...").
-- Structure: one sentence of factual context (why you are writing) -> one sentence introducing Newark Firm as a general-practice firm -> the specific type of B2B relationship being proposed -> a single, low-pressure next step (e.g., a brief call) -> a brief, courteous closing sentence. No signature block.
+- No hype, no false familiarity, no filler transitions ("So," "Also," "Just wanted to..."), and no stock AI-email openers ("I hope this finds you well," "I wanted to reach out," "I noticed that...").
+- Cover, in whatever order and sentence count feels natural for this specific situation, not a rigid formula: why you are writing, that Newark Firm is a general-practice firm, the specific type of B2B relationship being proposed, and a single low-pressure next step (e.g., a brief call). Vary sentence length -- do not make every sentence the same length and shape, that is what makes an e-mail read as AI-generated. No signature block, no closing pleasantry that sounds like a form letter.
 - 100-160 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME organization -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together. Never claim more signals exist than are actually listed.
@@ -1813,11 +1895,11 @@ You are drafting a SHORT, professional e-mail from ${identity} to the point of c
 
 STRICT GROUNDING RULE: use only the facts given below about the opportunity (the prime contractor's name, the work description, location, NAICS code). Never invent capabilities, past performance, certifications, or details about ${identity} beyond the identity given here. SubNet's own keyword search is loose and sometimes surfaces work that doesn't actually fit -- if the described work does not plausibly match what ${identity} does, say so plainly as the first line of the e-mail body instead of forcing a pitch that doesn't fit.
 
-TONE AND STYLE -- formal, professional subcontracting inquiry, not a cold sales pitch:
+TONE AND STYLE -- formal, professional subcontracting inquiry that reads like a specific person wrote it, not a cold sales pitch or a template:
 - No standalone greeting like "Hello," or "Hi," on its own line -- open with a formal salutation to the named point of contact or the firm.
 - No contractions anywhere.
-- No hype, no generic sales language -- this is a capability inquiry, not a pitch.
-- Structure: reference the specific posted opportunity by name -> state interest in teaming as a subcontractor -> one sentence on the relevant capability -> ask for a brief call or more detail on subcontracting requirements -> brief, courteous closing. No signature block.
+- No hype, no generic sales language, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out") -- this is a capability inquiry, not a pitch.
+- Cover, in whatever order and sentence count feels natural, not a rigid formula: the specific posted opportunity by name, interest in teaming as a subcontractor, the relevant capability, and a request for a brief call or more detail on subcontracting requirements. Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated. No signature block.
 - 100-150 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate postings from the SAME prime contractor -- write ONE combined e-mail, not two pitches stitched together.
@@ -1842,12 +1924,12 @@ STRICT GROUNDING RULE: use only the facts given below about the recipient. Never
 You may reference ONE of Aegis's real services from this list if it genuinely fits (do not invent a service or price not on this list):
 ${AEGIS_SERVICES_CONTEXT}
 
-TONE AND STYLE -- formal business-development correspondence, not a casual cold email:
+TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it for this specific recipient, not a mail-merge template:
 - No standalone greeting like "Hello," or "Hi," on its own line -- either open with a formal salutation appropriate for an unnamed recipient ("Good afternoon," or "To the [Company] team,") or begin directly with the context sentence, no greeting at all.
 - No contractions anywhere (write "that is" not "that's", "we do not" not "we don't", "I am" not "I'm").
-- No hype, no false familiarity ("I noticed your company is doing great things!"), no filler transitions ("So," "Also," "Just wanted to..." to open a sentence).
-- Precise, declarative sentences. Assume the recipient is a senior decision-maker with little time.
-- Structure: one sentence of factual context (why you are writing) -> one sentence introducing Aegis Global Holdings -> the specific service and price -> a single, low-pressure next step -> a brief, courteous closing sentence. No signature block.
+- No hype, no false familiarity ("I noticed your company is doing great things!"), no filler transitions ("So," "Also," "Just wanted to..." to open a sentence), and no stock AI-email openers ("I hope this finds you well," "I wanted to reach out regarding," "I came across your posting").
+- Precise, declarative sentences, but vary their length and rhythm -- a run of same-length sentences is what makes an e-mail read as AI-generated, not a person. Assume the recipient is a senior decision-maker with little time.
+- Cover, in whatever order and sentence count feels natural for this specific opportunity, not a rigid formula: why you are writing, a brief introduction of Aegis Global Holdings, the specific service and price, and a single low-pressure next step. No signature block, no closing pleasantry that sounds boilerplate.
 - 120-180 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME company -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together. Still recommend only ONE Aegis service overall unless two are both clearly and separately justified. Never claim more signals exist than are actually listed.
@@ -1980,6 +2062,19 @@ async function sendDigestEmail(env, items) {
             ${item.awardAmount ? "Award: $" + Math.round(item.awardAmount).toLocaleString() : ""}
           </p>
           <p style="margin:8px 0;font-size:14px"><strong>Why matched:</strong> ${item.reasons.map((r) => `✓ ${escHtml(r)}`).join(" &nbsp; ")}</p>
+          ${
+            item.aiSummary
+              ? `<div style="background:#f4f8fb;border-left:3px solid #0E141B;padding:10px 14px;margin:8px 0;font-size:14px">
+                   <strong>What's actually being asked for:</strong> ${escHtml(item.aiSummary.summary || "")}
+                   ${
+                     item.aiSummary.relevantServices?.length
+                       ? `<br><strong>Could offer:</strong> ${item.aiSummary.relevantServices.map((s) => escHtml(s)).join(", ")}`
+                       : ""
+                   }
+                   <br><strong>Always worth offering:</strong> the free <a href="https://aegisglobalholdings.com/ai-visibility-check.html">AI Visibility Scan</a> as a low-friction next step.
+                 </div>`
+              : ""
+          }
           <p style="margin:8px 0;font-size:14px">
             <a href="${escHtml(item.url)}">View ${
               item.source === "usaspending" ? "on USASpending.gov" :
@@ -2007,10 +2102,12 @@ async function sendDigestEmail(env, items) {
       ${cardsHtml}
     </div>`,
     text: sorted
-      .map(
-        (item) =>
-          `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`,
-      )
+      .map((item) => {
+        const summaryLines = item.aiSummary
+          ? `\nWhat's being asked for: ${item.aiSummary.summary || ""}${item.aiSummary.relevantServices?.length ? `\nCould offer: ${item.aiSummary.relevantServices.join(", ")}` : ""}\nAlways worth offering: free AI Visibility Scan (https://aegisglobalholdings.com/ai-visibility-check.html)`
+          : "";
+        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
+      })
       .join("\n\n"),
   });
 
