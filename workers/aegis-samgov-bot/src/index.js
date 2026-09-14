@@ -423,8 +423,8 @@ async function ingestAndNotify(env, allItems) {
       `INSERT INTO opportunities
         (notice_id, title, agency, notice_type, naics_code, set_aside, posted_date,
          response_deadline, sam_url, description_excerpt, score, matched_reasons,
-         respond_token, source, award_amount, company_key, business)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         respond_token, source, award_amount, company_key, business, contact_name, contact_email)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         item.id,
@@ -444,6 +444,8 @@ async function ingestAndNotify(env, allItems) {
         item.awardAmount,
         PROSPECT_SOURCES.includes(item.source) ? normalizeCompanyKey(item.title) : null,
         item.business || "aegis",
+        item.contactName || null,
+        item.contactEmail || null,
       )
       .run();
 
@@ -562,6 +564,11 @@ async function ensureOutcomeColumns(env) {
     // pre-existing row and for every non-sam_gov source, matching the
     // single-business behavior this column didn't previously need to track.
     "ALTER TABLE opportunities ADD COLUMN business TEXT",
+    // Real point-of-contact data SAM.gov, USAJOBS, and SubNet all actually
+    // return but this bot previously discarded -- see mapSubnetResults,
+    // mapUsaJobsResult, and scanSamGov's item.contactEmail.
+    "ALTER TABLE opportunities ADD COLUMN contact_name TEXT",
+    "ALTER TABLE opportunities ADD COLUMN contact_email TEXT",
     "ALTER TABLE opportunities ADD COLUMN outreach_drafted_at TEXT",
     "CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)",
   ];
@@ -1127,10 +1134,10 @@ function mapSubnetResults(results) {
       postedDate: null,
       responseDeadline: r.closingDate || null,
       url: r.url.startsWith("http") ? r.url : `https://www.sba.gov${r.url}`,
-      description: [r.description, r.pointOfContactName ? `Point of contact: ${r.pointOfContactName}` : null]
-        .filter(Boolean)
-        .join(" — "),
+      description: r.description || "",
       awardAmount: null,
+      contactName: r.pointOfContactName || null,
+      contactEmail: r.pointOfContactEmail || null,
     }));
 }
 
@@ -1172,6 +1179,11 @@ async function scanSamGov(env) {
       description: "", // resolved lazily in runScan, only for new items
       descriptionRef: opp.description || null,
       awardAmount: null,
+      // SAM.gov actually returns a real point of contact -- previously
+      // discarded. Surfaced in the Phase 2A checklist e-mail so Robert
+      // knows who to reach with questions instead of hunting for it.
+      contactName: opp.pointOfContact?.[0]?.fullName || null,
+      contactEmail: opp.pointOfContact?.[0]?.email || null,
     });
   }
   return items;
@@ -1389,6 +1401,11 @@ function mapUsaJobsResult(r, source, forcedReason) {
     description: d.QualificationSummary || d.UserArea?.Details?.JobSummary || "",
     awardAmount: null,
     forcedReason,
+    // USAJOBS actually returns a real agency contact e-mail -- previously
+    // discarded even though the outreach draft e-mail's warning banner
+    // claims "no contact e-mail is available from this source." Surfaced
+    // so Robert has a real recipient instead of hunting for one himself.
+    contactEmail: d.UserArea?.Details?.AgencyContactEmail || null,
   };
 }
 
@@ -1432,7 +1449,7 @@ async function loadRespondRow(env, id, token) {
   const row = await env.DB
     .prepare(
       `SELECT respond_token, title, source, agency, description_excerpt, award_amount,
-              matched_reasons, sam_url, naics_code, set_aside, business
+              matched_reasons, sam_url, naics_code, set_aside, business, contact_name, contact_email
        FROM opportunities WHERE notice_id = ?`,
     )
     .bind(id)
@@ -1550,6 +1567,10 @@ async function draftSamGovChecklist(env, noticeId, title) {
     noticeId,
     token: row?.respond_token,
     business: row?.business,
+    // Pulled from the fresh re-fetch, not the days-old D1 copy -- more
+    // likely to be current if the notice was amended since it was scanned.
+    contactName: opp.pointOfContact?.[0]?.fullName || null,
+    contactEmail: opp.pointOfContact?.[0]?.email || null,
     opp,
     resourceLinks,
     checklist,
@@ -1614,13 +1635,16 @@ Respond with ONLY a raw JSON object, no markdown fences, no preamble:
   "openQuestions": ["anything a bidder would need to clarify because the text is ambiguous or silent on it"]
 }`;
 
-async function sendChecklistEmail(env, { title, noticeId, token, business, opp, resourceLinks, checklist }) {
+async function sendChecklistEmail(env, { title, noticeId, token, business, contactName, contactEmail, opp, resourceLinks, checklist }) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
   const samUrl = opp.uiLink || `https://sam.gov/workspace/contract/opp/${noticeId}/view`;
   const businessLabel = BUSINESS_LABELS[business] || BUSINESS_LABELS.aegis;
   const sentLink = token
     ? `<p style="margin-top:20px"><a href="${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I submitted this bid — start tracking</a></p>`
+    : "";
+  const contactHtml = contactEmail
+    ? `<p><strong>Point of contact:</strong> ${escHtml(contactName || "")} &lt;${escHtml(contactEmail)}&gt;</p>`
     : "";
 
   const bodyHtml = checklist.parseError
@@ -1650,11 +1674,12 @@ async function sendChecklistEmail(env, { title, noticeId, token, business, opp, 
       </p>
       <h2>${escHtml(title)}</h2>
       <p><a href="${escHtml(samUrl)}">View on SAM.gov</a></p>
+      ${contactHtml}
       ${bodyHtml}
       ${linksHtml}
       ${sentLink}
     </div>`,
-    text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}${token ? `\n\nI submitted this: ${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent` : ""}`,
+    text: `AI-drafted checklist for: ${title}\n(Not authoritative — verify against the actual solicitation.)\n${contactEmail ? `\nPoint of contact: ${contactName || ""} <${contactEmail}>\n` : ""}\n${JSON.stringify(checklist, null, 2)}\n\n${samUrl}${token ? `\n\nI submitted this: ${WORKER_URL}/outcome?id=${encodeURIComponent(noticeId)}&token=${token}&action=sent` : ""}`,
   });
 }
 
@@ -1891,8 +1916,13 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
     : isLegal
     ? "Newark Firm outreach draft (AI, unsent)"
     : "Outreach draft (AI, unsent)";
-  const contactWarning = isSubcontract
-    ? "A point of contact from the SubNet posting is included in the description below -- verify it's current before sending."
+  const contactBanner = row.contact_email
+    ? `<p style="background:#e8f8ee;border-left:3px solid #2e7d32;padding:12px 16px;font-size:13px">
+         📇 Contact found: <strong>${escHtml(row.contact_name || "")} ${row.contact_name ? "&lt;" : ""}${escHtml(row.contact_email)}${row.contact_name ? "&gt;" : ""}</strong> -- verify it's still current before sending.
+       </p>`
+    : "";
+  const contactWarning = row.contact_email
+    ? "A contact is included above -- verify it's current before sending."
     : `No contact e-mail is available from this source (${escHtml(row.source)}) -- find the right recipient yourself before using this.`;
 
   await sendViaResend(env.RESEND_API_KEY, {
@@ -1904,13 +1934,14 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
         ⚠ AI-drafted, NOT sent to anyone. ${contactWarning} Verify the claims against the source link below.
       </p>
       ${senderBanner}
+      ${contactBanner}
       ${combinedBanner}
       <h2>${escHtml(row.title)}</h2>
       ${row.sam_url ? `<p><a href="${escHtml(row.sam_url)}">Source link</a></p>` : ""}
       ${draftHtml}
       <p style="margin-top:20px"><a href="${sentUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I sent this — start tracking</a></p>
     </div>`,
-    text: `${isLegal ? "NEWARK FIRM DRAFT -- send from robert@newarkfirm.com, not Aegis.\n\n" : ""}${combinedWith.length ? `Combined with: ${combinedWith.join(", ")}\n\n` : ""}AI-drafted outreach e-mail for: ${row.title}\n(NOT sent -- no contact info available, find the recipient yourself.)\n\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}\n\nI sent this: ${sentUrl}`,
+    text: `${isLegal ? "NEWARK FIRM DRAFT -- send from robert@newarkfirm.com, not Aegis.\n\n" : ""}${row.contact_email ? `Contact found: ${row.contact_name || ""} <${row.contact_email}> -- verify before sending.\n\n` : ""}${combinedWith.length ? `Combined with: ${combinedWith.join(", ")}\n\n` : ""}AI-drafted outreach e-mail for: ${row.title}\n(NOT sent -- verify recipient before using this.)\n\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}\n\nI sent this: ${sentUrl}`,
   });
 }
 

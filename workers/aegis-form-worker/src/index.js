@@ -714,6 +714,15 @@ async function sendClientEmail(env, lead, { report, analysisNote }) {
 // ── Shared Resend helper ──────────────────────────────────────────────────────
 
 function sendViaResend(apiKey, payload) {
+  // Every html payload here is a bare fragment with no declared charset,
+  // which is what caused an em dash to render as "â€”" in aegis-samgov-bot's
+  // e-mails -- same shared helper pattern, same bug, fixed the same way.
+  if (payload.html) {
+    payload = {
+      ...payload,
+      html: `<!doctype html><html><head><meta charset="utf-8"></head><body>${payload.html}</body></html>`,
+    };
+  }
   return fetch(RESEND_API, {
     method: "POST",
     headers: {
