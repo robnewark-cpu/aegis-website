@@ -58,11 +58,12 @@
     // InventorOS Intake Pack — $249 one-time (website checkout; not in scan catalog)
     "STRIPE_LINK_INVENTOR": "https://buy.stripe.com/14A4gB3BW5V1cfNfXgffy0j",
 
-    // AegisOS - Practice Launch — $99 / user / month (quantity = seats)
-    "STRIPE_LINK_PRACTICE": "https://buy.stripe.com/14AbJ3goIabh2FdcL4ffy09",
-
-    // AegisOS - Professional — $189 / user / month (quantity = seats)
-    "STRIPE_LINK_PROFESSIONAL": "https://buy.stripe.com/eVq9AVdcw5V1frZcL4ffy0a",
+    // LexFlow tiers — website checkout only; not in scan catalog. See stripe-skus.js.
+    "STRIPE_LINK_LEXFLOW_SOLO": "https://buy.stripe.com/dRm00l6O83MT1B99ySffy0m",
+    "STRIPE_LINK_LEXFLOW_PROFESSIONAL": "https://buy.stripe.com/5kQ4gB8Wg4QX3Jh6mGffy0n",
+    "STRIPE_LINK_LEXFLOW_UNLIMITED": "https://buy.stripe.com/28E6oJa0k0AH0x526qffy0o",
+    "STRIPE_LINK_LEXFLOW_FIRM": "https://buy.stripe.com/3cIaEZdcw1ELenV8uOffy0p",
+    "STRIPE_LINK_LEXFLOW_TOPUP": "https://buy.stripe.com/4gMfZj0pK0AH1B93auffy0q",
 
     // Optional annual/bundle conversation — not a published SKU.
     "STRIPE_ANNUAL_LINK": ""
