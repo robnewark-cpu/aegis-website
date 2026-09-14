@@ -82,6 +82,16 @@
  * header matching INGEST_SECRET). This Worker still does all the scoring,
  * D1 storage, and digest e-mail — GitHub Actions is only a network relay
  * for the one domain Workers can't reach.
+ *
+ * Same story for SBA SubNet (legacy.sba.gov/.../subcontracting-opportunities)
+ * — confirmed via testing that it 403s every request from Cloudflare
+ * Workers, so .github/workflows/subnet-scan.yml fetches and HTML-parses it
+ * from a normal GitHub Actions runner and POSTs structured results to
+ * POST /ingest-subnet (same INGEST_SECRET). SubNet items are subcontracting
+ * opportunities posted by large prime contractors, not open government
+ * solicitations, so approving one drafts a "propose teaming as your
+ * subcontractor" e-mail (see buildSubcontractOutreachSystem), not a
+ * requirements checklist.
  */
 
 const SAM_API = "https://api.sam.gov/opportunities/v2/search";
@@ -126,7 +136,6 @@ const LOANSERVICING_KEYWORD_RULES = [
   { term: "escrow", weight: 15, label: "Escrow" },
   { term: "consumer lending", weight: 15, label: "Consumer Lending" },
   { term: "collections", weight: 15, label: "Collections" },
-  { term: "veteran", weight: 15, label: "Veteran-Focused" },
 ];
 const MODMEDIATIONS_KEYWORD_RULES = [
   { term: "alternative dispute resolution", weight: 30, label: "ADR" },
@@ -135,13 +144,22 @@ const MODMEDIATIONS_KEYWORD_RULES = [
   { term: "dispute resolution", weight: 20, label: "Dispute Resolution" },
   { term: "neutral", weight: 10, label: "Neutral/Mediator" },
 ];
+// Bare "attorney"/"counsel" deliberately excluded -- confirmed live during
+// testing that a plain DOJ court-reporting-services contract scored as a
+// Newark Firm match purely because its description said "UNITED STATES
+// ATTORNEY'S OFFICE" (the office name, not a legal-services signal). Same
+// false-positive class already fixed once for veteran-set-aside scoring
+// (agency names containing "veteran" with no actual set-aside) -- narrative
+// government text is full of office names ("District Attorney," "County
+// Counsel," "Attorney General") that say nothing about a legal-services
+// need. Every term below is specific enough that it wouldn't appear as
+// part of an office name.
 const NEWARKFIRM_KEYWORD_RULES = [
   { term: "outside counsel", weight: 30, label: "Outside Counsel" },
-  { term: "attorney", weight: 25, label: "Attorney" },
   { term: "general counsel", weight: 20, label: "General Counsel" },
-  { term: "counsel", weight: 15, label: "Counsel" },
   { term: "legal services", weight: 20, label: "Legal Services" },
   { term: "litigation support", weight: 20, label: "Litigation Support" },
+  { term: "law firm", weight: 20, label: "Law Firm" },
 ];
 
 const BUSINESS_KEYWORD_RULES = {
@@ -215,7 +233,18 @@ const OUTCOME_ACTIONS_NEEDING_DATE = ["schedule_meeting", "meeting_reschedule"];
 // Sources where approving triggers an outreach draft (Phase 2B) rather than
 // a requirements checklist (sam_gov, Phase 2A). Used both to route Approve
 // and to decide which rows participate in same-company-same-day dedup.
-const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal"];
+const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal", "subnet"];
+
+// Short, factual identity lines for the SubNet subcontracting-outreach
+// prompt -- these are the only claims the model is allowed to make about
+// who's sending the e-mail, so keep them to what's already established
+// elsewhere in this codebase (fees.html, lexflow.html, newarkfirm framing).
+const BUSINESS_IDENTITY = {
+  aegis: "Aegis Global Holdings, a veteran-owned IT and compliance consulting company",
+  loanservicing: "Veteran Loan Servicing, a loan servicing company",
+  modmediations: "Mod Mediations, a mediation and alternative dispute resolution provider",
+  newarkfirm: "Newark Firm, a general-practice law firm",
+};
 
 // Weekly pipeline summary, separate cron entry (see wrangler.jsonc). Mondays
 // 9am Central (14:00 UTC / 8am during CDT) -- same DST caveat as the daily
@@ -296,6 +325,12 @@ export default {
     // workflow (Workers can't reach that domain directly — see file header).
     if (request.method === "POST" && url.pathname === "/ingest-usaspending") {
       return handleIngestUsaSpending(request, env);
+    }
+
+    // Receives raw SBA SubNet results fetched by the GitHub Actions
+    // workflow (SubNet 403s every Workers request — see handleIngestSubnet).
+    if (request.method === "POST" && url.pathname === "/ingest-subnet") {
+      return handleIngestSubnet(request, env);
     }
 
     return jsonResponse({ error: "Not found" }, 404);
@@ -1035,6 +1070,63 @@ async function handleIngestUsaSpending(request, env) {
   return jsonResponse(result);
 }
 
+// ── SBA SubNet ingest endpoint (called by GitHub Actions) ──────────────────
+//
+// SubNet (legacy.sba.gov/.../subcontracting-opportunities) 403s every
+// request from Cloudflare Workers -- confirmed by testing, same class of
+// problem as USASpending.gov. A GitHub Actions workflow fetches and parses
+// the HTML there (normal outbound networking, no bot-blocking observed)
+// and forwards structured results here. Each result already carries which
+// business's keyword search found it (see subnet-scan.yml) -- SubNet's own
+// keyword matching is loose (a plain "IT" search returned an HVAC listing
+// in testing), so this is a candidate list, not a pre-filtered one; real
+// filtering happens in scoreItem() same as every other source.
+
+async function handleIngestSubnet(request, env) {
+  if (!env.INGEST_SECRET) {
+    return jsonResponse({ error: "INGEST_SECRET not configured" }, 500);
+  }
+  if (request.headers.get("X-Ingest-Secret") !== env.INGEST_SECRET) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const rawResults = Array.isArray(body.results) ? body.results : [];
+  const items = mapSubnetResults(rawResults);
+  const result = await ingestAndNotify(env, items);
+  return jsonResponse(result);
+}
+
+function mapSubnetResults(results) {
+  return results
+    .filter((r) => r.url && r.title)
+    .map((r) => ({
+      id: `subnet_${r.url.replace(/[^a-zA-Z0-9]+/g, "-").slice(-120)}`,
+      source: "subnet",
+      business: ["aegis", "loanservicing", "modmediations", "newarkfirm"].includes(r.business)
+        ? r.business
+        : "aegis",
+      title: `${r.primeContractor || "Unknown prime"} — ${r.title}`,
+      agency: r.placeOfPerformance || null,
+      noticeType: "Subcontracting Opportunity (prime seeking a subcontractor)",
+      naicsCode: r.naicsCode || null,
+      setAside: null,
+      postedDate: null,
+      responseDeadline: r.closingDate || null,
+      url: r.url.startsWith("http") ? r.url : `https://www.sba.gov${r.url}`,
+      description: [r.description, r.pointOfContactName ? `Point of contact: ${r.pointOfContactName}` : null]
+        .filter(Boolean)
+        .join(" — "),
+      awardAmount: null,
+    }));
+}
+
 // ── Source 1: SAM.gov open solicitations ────────────────────────────────────
 
 async function scanSamGov(env) {
@@ -1133,6 +1225,12 @@ function mapUsaSpendingResults(results) {
     .map((r) => ({
       id: `usa_${r.generated_internal_id}`,
       source: "usaspending",
+      // Tagged by usaspending-scan.yml per which business's keyword search
+      // found it (that workflow runs one query per business now, not just
+      // Aegis's). Falls back to "aegis" for safety if ever missing.
+      business: ["aegis", "loanservicing", "modmediations", "newarkfirm"].includes(r._business)
+        ? r._business
+        : "aegis",
       title: `${r["Recipient Name"] || "Unknown recipient"} — ${truncate(r["Description"] || "(no description)", 80)}`,
       agency: r["Awarding Agency"] || null,
       noticeType: "Awarded Contract (prospect, not open for bid)",
@@ -1580,15 +1678,26 @@ function describeOpportunity(r) {
     .join("\n");
 }
 
+// Which outreach framing a row needs -- these are mutually exclusive
+// senders/pitches and must never be merged into one combined e-mail.
+function outreachVariant(row) {
+  if (row.source === "subnet") return "subcontract";
+  if (row.source === "adzuna_legal" || row.source === "usajobs_legal") return "legal";
+  return "aegis";
+}
+
 async function draftOutreachEmail(env, id, row) {
   const isLegal = row.source === "adzuna_legal" || row.source === "usajobs_legal";
+  const isSubcontract = row.source === "subnet";
+  const variant = outreachVariant(row);
   const companyKey = normalizeCompanyKey(row.title);
 
   // If another lead for the same company already got an outreach draft
   // today, pull it in and write ONE combined e-mail instead of sending the
   // same company two separate pitches on the same day. Only merges across
-  // rows with the same isLegal-ness -- a Newark Firm B2B pitch and an Aegis
-  // consulting pitch are different senders/framings and must stay separate.
+  // rows with the same outreach variant -- a Newark Firm B2B pitch, an
+  // Aegis consulting pitch, and a SubNet subcontracting inquiry are
+  // different senders/framings and must stay separate.
   let siblings = [];
   if (companyKey) {
     const { results } = await env.DB.prepare(
@@ -1599,9 +1708,7 @@ async function draftOutreachEmail(env, id, row) {
     )
       .bind(companyKey, id)
       .all();
-    siblings = (results || []).filter(
-      (r) => (r.source === "adzuna_legal" || r.source === "usajobs_legal") === isLegal,
-    );
+    siblings = (results || []).filter((r) => outreachVariant(r) === variant);
   }
 
   const allOpportunities = [row, ...siblings];
@@ -1610,12 +1717,13 @@ async function draftOutreachEmail(env, id, row) {
       ? allOpportunities.map((r, i) => `--- Opportunity ${i + 1} of ${allOpportunities.length} ---\n${describeOpportunity(r)}`).join("\n\n")
       : describeOpportunity(row);
 
-  const draft = await callAnthropicForOutreach(env, { context, isLegal });
+  const draft = await callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business: row.business });
   await sendOutreachDraftEmail(env, {
     row,
     id,
     draft,
     isLegal,
+    isSubcontract,
     combinedWith: siblings.map((s) => s.title),
   });
 
@@ -1654,8 +1762,38 @@ Respond with ONLY a raw JSON object, no markdown fences:
   "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
 }`;
 
-async function callAnthropicForOutreach(env, { context, isLegal }) {
-  const system = isLegal
+// SubNet items are posted by a large prime contractor looking for a
+// subcontractor on a federal contract they already hold -- the pitch here
+// is "we'd like to team with you on this specific posting," not a cold
+// sales pitch, and it's the same shape regardless of which of the four
+// businesses is sending it (only the identity line changes).
+function buildSubcontractOutreachSystem(business) {
+  const identity = BUSINESS_IDENTITY[business] || BUSINESS_IDENTITY.aegis;
+  return `\
+You are drafting a SHORT, professional e-mail from ${identity} to the point of contact listed for a subcontracting opportunity posted on SBA SubNet. A large prime contractor holding a federal contract with a small-business subcontracting plan posted this opportunity looking for a subcontractor -- this is not a bid on a government contract directly, it is a proposal to team with THIS PRIME as their subcontractor.
+
+STRICT GROUNDING RULE: use only the facts given below about the opportunity (the prime contractor's name, the work description, location, NAICS code). Never invent capabilities, past performance, certifications, or details about ${identity} beyond the identity given here. SubNet's own keyword search is loose and sometimes surfaces work that doesn't actually fit -- if the described work does not plausibly match what ${identity} does, say so plainly as the first line of the e-mail body instead of forcing a pitch that doesn't fit.
+
+TONE AND STYLE -- formal, professional subcontracting inquiry, not a cold sales pitch:
+- No standalone greeting like "Hello," or "Hi," on its own line -- open with a formal salutation to the named point of contact or the firm.
+- No contractions anywhere.
+- No hype, no generic sales language -- this is a capability inquiry, not a pitch.
+- Structure: reference the specific posted opportunity by name -> state interest in teaming as a subcontractor -> one sentence on the relevant capability -> ask for a brief call or more detail on subcontracting requirements -> brief, courteous closing. No signature block.
+- 100-150 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate postings from the SAME prime contractor -- write ONE combined e-mail, not two pitches stitched together.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
+}`;
+}
+
+async function callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business }) {
+  const system = isSubcontract
+    ? buildSubcontractOutreachSystem(business)
+    : isLegal
     ? LEGAL_OUTREACH_SYSTEM
     : `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, a veteran-owned technology/compliance consulting company, for Robert (the owner) to review before sending.
@@ -1709,7 +1847,7 @@ Respond with ONLY a raw JSON object, no markdown fences:
   }
 }
 
-async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, combinedWith = [] }) {
+async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontract, combinedWith = [] }) {
   const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
   const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
 
@@ -1734,14 +1872,22 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, combinedWi
 
   const sentUrl = `${WORKER_URL}/outcome?id=${encodeURIComponent(id)}&token=${row.respond_token}&action=sent`;
 
+  const subjectPrefix = isSubcontract
+    ? "Subcontracting outreach draft (AI, unsent)"
+    : isLegal
+    ? "Newark Firm outreach draft (AI, unsent)"
+    : "Outreach draft (AI, unsent)";
+  const contactWarning = isSubcontract
+    ? "A point of contact from the SubNet posting is included in the description below -- verify it's current before sending."
+    : `No contact e-mail is available from this source (${escHtml(row.source)}) -- find the right recipient yourself before using this.`;
+
   await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
-    subject: `${isLegal ? "Newark Firm outreach draft (AI, unsent)" : "Outreach draft (AI, unsent)"} — ${row.title}`,
+    subject: `${subjectPrefix} — ${row.title}`,
     html: `<div style="font-family:sans-serif;max-width:640px">
       <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
-        ⚠ AI-drafted, NOT sent to anyone. No contact e-mail is available from this source (${escHtml(row.source)}) --
-        find the right recipient yourself before using this. Verify the claims against the source link below.
+        ⚠ AI-drafted, NOT sent to anyone. ${contactWarning} Verify the claims against the source link below.
       </p>
       ${senderBanner}
       ${combinedBanner}
@@ -1773,6 +1919,7 @@ async function sendDigestEmail(env, items) {
         item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "subnet" ? "SUBCONTRACTING OPPORTUNITY — PROSPECT" :
         "OPEN SOLICITATION";
       const businessLabel = BUSINESS_LABELS[item.business] || BUSINESS_LABELS.aegis;
       return `
@@ -1843,6 +1990,7 @@ async function sendReminderDigestEmail(env, items) {
         item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "subnet" ? "SUBCONTRACTING OPPORTUNITY — PROSPECT" :
         "OPEN SOLICITATION";
       return `
         <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">

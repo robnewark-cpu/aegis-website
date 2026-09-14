@@ -7,6 +7,12 @@ name: USASpending awarded-contracts scan
 # and forwards the raw results to aegis-samgov-bot, which does the actual
 # scoring, D1 storage, and digest e-mail. See that Worker's src/index.js
 # file header for the full explanation.
+#
+# Runs one USASpending query per business (Robert's four companies), each
+# with its own keyword list matching that business's KEYWORD_RULES in
+# src/index.js, and tags every result with which business found it before
+# forwarding -- the Worker scores each against that business's own rules
+# rather than diluting everything into one Aegis-only keyword set.
 
 on:
   schedule:
@@ -17,7 +23,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch recent awarded contracts from USASpending.gov
+      - name: Fetch recent awarded contracts from USASpending.gov, per business
         env:
           AWARD_MIN: "50000"
           AWARD_MAX: "10000000"
@@ -25,21 +31,55 @@ jobs:
           START_DATE=$(date -u -d '2 days ago' +%Y-%m-%d)
           END_DATE=$(date -u +%Y-%m-%d)
 
-          curl -sS -X POST https://api.usaspending.gov/api/v2/search/spending_by_award/ \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"filters\": {
-                \"time_period\": [{\"start_date\": \"$START_DATE\", \"end_date\": \"$END_DATE\"}],
-                \"award_type_codes\": [\"A\",\"B\",\"C\",\"D\"],
-                \"keywords\": [\"fedramp\",\"cmmc\",\"nist 800\",\"compliance\",\"cybersecurity\",\"information security\",\"cloud\",\"audit\",\"it consulting\",\"information technology\",\"software development\",\"web application\",\"website\"],
-                \"award_amounts\": [{\"lower_bound\": $AWARD_MIN, \"upper_bound\": $AWARD_MAX}]
-              },
-              \"fields\": [\"Recipient Name\",\"Award Amount\",\"Description\",\"Awarding Agency\",\"Period of Performance Start Date\"],
-              \"sort\": \"Award Amount\",
-              \"order\": \"desc\",
-              \"limit\": 100
-            }" \
-            -o usaspending-raw.json
+          fetch_business() {
+            business="$1"
+            keywords_json="$2"
+            curl -sS -X POST https://api.usaspending.gov/api/v2/search/spending_by_award/ \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"filters\": {
+                  \"time_period\": [{\"start_date\": \"$START_DATE\", \"end_date\": \"$END_DATE\"}],
+                  \"award_type_codes\": [\"A\",\"B\",\"C\",\"D\"],
+                  \"keywords\": $keywords_json,
+                  \"award_amounts\": [{\"lower_bound\": $AWARD_MIN, \"upper_bound\": $AWARD_MAX}]
+                },
+                \"fields\": [\"Recipient Name\",\"Award Amount\",\"Description\",\"Awarding Agency\",\"Period of Performance Start Date\"],
+                \"sort\": \"Award Amount\",
+                \"order\": \"desc\",
+                \"limit\": 100
+              }" \
+              -o "usaspending-$business.json"
+
+            # Tag every result with its business before merging, so the
+            # Worker knows which KEYWORD_RULES set to score it against.
+            python3 -c "
+          import json
+          with open('usaspending-$business.json') as f:
+              data = json.load(f)
+          results = data.get('results', [])
+          for r in results:
+              r['_business'] = '$business'
+          with open('usaspending-$business-tagged.json', 'w') as f:
+              json.dump(results, f)
+          print(f'$business: {len(results)} results')
+          "
+          }
+
+          fetch_business "aegis" '["fedramp","cmmc","nist 800","compliance","cybersecurity","information security","cloud","audit","it consulting","information technology","software development","web application","website","payment processing","billing system"]'
+          fetch_business "loanservicing" '["loan servicing","mortgage servicing","default servicing","escrow","consumer lending"]'
+          fetch_business "modmediations" '["mediation","arbitration","alternative dispute resolution","dispute resolution"]'
+          fetch_business "newarkfirm" '["outside counsel","attorney","general counsel","legal services","litigation support"]'
+
+          python3 -c "
+          import json
+          combined = []
+          for business in ['aegis', 'loanservicing', 'modmediations', 'newarkfirm']:
+              with open(f'usaspending-{business}-tagged.json') as f:
+                  combined.extend(json.load(f))
+          with open('usaspending-raw.json', 'w') as f:
+              json.dump({'results': combined}, f)
+          print(f'combined: {len(combined)} total results')
+          "
 
           cat usaspending-raw.json | head -c 500
 
