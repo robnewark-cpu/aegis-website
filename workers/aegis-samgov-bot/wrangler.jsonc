@@ -43,8 +43,12 @@
     "TO_EMAIL":   "info@aegisglobalholdings.com",
 
     // Comma-separated NAICS codes to search. Edit to change which
-    // opportunities the bot looks for.
-    "NAICS_CODES": "541511,541512,541519,541611,541618,541690",
+    // opportunities the bot looks for. 518210 (Computing Infrastructure
+    // Providers, Data Processing, Web Hosting) added after confirming two
+    // real cloud/IT-support solicitations (Navy Enterprise Cloud Support
+    // Services, DHS "Cumulus" multi-award cloud solicitation) were filed
+    // under it and completely invisible to the bot under the original list.
+    "NAICS_CODES": "541511,541512,541519,541611,541618,541690,518210",
 
     // Minimum score (0-100) for an item to be e-mailed. Lowered from the
     // original 40 so more real leads surface — approve/decline in the
