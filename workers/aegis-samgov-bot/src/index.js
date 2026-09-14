@@ -46,6 +46,19 @@
  * Runs as part of the daily cron, right after the scan. Items whose
  * response_deadline has already passed are excluded (nothing to act on).
  *
+ * Outcome tracking (approved leads): OUTCOME_FIRST_CHECK_DAYS after Robert
+ * approves an item, GET /outcome-linked e-mail asks how it went: won,
+ * declined, waiting on a meeting (requires a date), or remind me later.
+ * "Remind me later" re-asks every OUTCOME_CHECK_INTERVAL_DAYS, up to
+ * OUTCOME_MAX_CHECKS times. Picking a meeting date schedules a check on
+ * that date asking whether the meeting happened — yes triggers Phase 2C
+ * (an AI-drafted follow-up e-mail, same strict-grounding + draft-only
+ * pattern as Phase 2A/2B), no lets Robert pick a new date or mark it dead.
+ * A separate weekly cron (WEEKLY_SUMMARY_CRON) e-mails a pipeline summary:
+ * counts by outcome, win rate, what changed since the last summary, and
+ * upcoming meetings — so the whole system can be tuned if the cadence or
+ * thresholds aren't right.
+ *
  * Required secrets  (wrangler secret put <NAME> --name aegis-samgov-bot)
  *   SAM_API_KEY      — free key from sam.gov -> Account Details -> Request API Key
  *   RESEND_API_KEY   — same Resend account used by the other Aegis workers
@@ -111,6 +124,34 @@ const REMINDER_FIRST_AFTER_DAYS = 3;
 const REMINDER_INTERVAL_DAYS = 3;
 const REMINDER_MAX_COUNT = 3;
 
+// Outcome tracking for approved leads: how did the outreach/checklist Robert
+// approved actually turn out? OUTCOME_FIRST_CHECK_DAYS after approval, ask.
+// If he snoozes it ("remind me later"), ask again every
+// OUTCOME_CHECK_INTERVAL_DAYS, up to OUTCOME_MAX_CHECKS times. Picking
+// "waiting for a meeting" requires a date; once that date arrives the bot
+// asks whether it happened and, if yes, drafts a follow-up e-mail.
+const OUTCOME_FIRST_CHECK_DAYS = 7;
+const OUTCOME_CHECK_INTERVAL_DAYS = 7;
+const OUTCOME_MAX_CHECKS = 4;
+const OUTCOME_ACTIONS = [
+  "won",
+  "lost",
+  "remind_later",
+  "schedule_meeting",
+  "meeting_occurred",
+  "meeting_reschedule",
+  "meeting_cancelled",
+];
+const OUTCOME_ACTIONS_NEEDING_DATE = ["schedule_meeting", "meeting_reschedule"];
+
+// Weekly pipeline summary, separate cron entry (see wrangler.jsonc). Mondays
+// 9am Central (14:00 UTC / 8am during CDT) -- same DST caveat as the daily
+// cron. Cron has no native "every other week"; to switch to biweekly later,
+// the cleanest change is checking bot_meta.last_summary_sent_at inside
+// sendWeeklyTrackingSummary() and skipping if under 13 days -- not done
+// here since Robert asked for weekly OR biweekly and this defaults weekly.
+const WEEKLY_SUMMARY_CRON = "0 14 * * 1";
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -139,6 +180,15 @@ export default {
       return handleRespond(env, request, ctx);
     }
 
+    // Same GET-renders / POST-mutates split as /respond, for the outcome
+    // check-in on already-approved leads (won / lost / meeting scheduling).
+    if (request.method === "GET" && url.pathname === "/outcome") {
+      return renderOutcomeConfirmation(env, url);
+    }
+    if (request.method === "POST" && url.pathname === "/outcome") {
+      return handleOutcome(env, request, ctx);
+    }
+
     // Manual trigger for testing without waiting for the cron.
     if (request.method === "GET" && url.pathname === "/run-now") {
       const result = await runScan(env);
@@ -153,6 +203,18 @@ export default {
       return jsonResponse(result);
     }
 
+    // Manual triggers for testing outcome tracking without waiting for the
+    // cron or for the configured day thresholds to actually elapse.
+    if (request.method === "GET" && url.pathname === "/check-outcomes-now") {
+      await ensureOutcomeColumns(env);
+      const result = await checkOutcomes(env);
+      return jsonResponse(result);
+    }
+    if (request.method === "GET" && url.pathname === "/send-tracking-summary-now") {
+      const result = await sendWeeklyTrackingSummary(env);
+      return jsonResponse(result);
+    }
+
     // Receives raw USASpending.gov results fetched by the GitHub Actions
     // workflow (Workers can't reach that domain directly — see file header).
     if (request.method === "POST" && url.pathname === "/ingest-usaspending") {
@@ -163,7 +225,11 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runDailyJobs(env));
+    if (event.cron === WEEKLY_SUMMARY_CRON) {
+      ctx.waitUntil(sendWeeklyTrackingSummary(env));
+    } else {
+      ctx.waitUntil(runDailyJobs(env));
+    }
   },
 };
 
@@ -277,8 +343,10 @@ async function ingestAndNotify(env, allItems) {
 
 async function runDailyJobs(env) {
   await ensureReminderColumns(env);
+  await ensureOutcomeColumns(env);
   await runScan(env);
   await sendFollowUpReminders(env);
+  await checkOutcomes(env);
 }
 
 // ── Follow-up reminders ──────────────────────────────────────────────────
@@ -351,6 +419,495 @@ async function sendFollowUpReminders(env) {
   }
 
   return { remindersSent: items.length };
+}
+
+// ── Outcome tracking for approved leads ─────────────────────────────────────
+
+// Idempotent — same pattern as ensureReminderColumns.
+async function ensureOutcomeColumns(env) {
+  const statements = [
+    "ALTER TABLE opportunities ADD COLUMN outcome TEXT",
+    "ALTER TABLE opportunities ADD COLUMN outcome_updated_at TEXT",
+    "ALTER TABLE opportunities ADD COLUMN meeting_date TEXT",
+    "ALTER TABLE opportunities ADD COLUMN outcome_check_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE opportunities ADD COLUMN outcome_check_sent_at TEXT",
+    "ALTER TABLE opportunities ADD COLUMN meeting_check_sent_at TEXT",
+    "CREATE TABLE IF NOT EXISTS bot_meta (key TEXT PRIMARY KEY, value TEXT)",
+  ];
+  for (const sql of statements) {
+    try {
+      await env.DB.prepare(sql).run();
+    } catch (err) {
+      if (!/duplicate column/i.test(err.message)) throw err;
+    }
+  }
+}
+
+// Finds approved leads due for a status check-in (never asked, or asked
+// and snoozed) and approved leads whose scheduled meeting date has arrived,
+// sends the relevant digest e-mail for each group, and stamps what was sent
+// so the next cron run doesn't re-ask the same question immediately.
+async function checkOutcomes(env) {
+  if (!env.RESEND_API_KEY) return { asksSent: 0, meetingChecksSent: 0 };
+
+  const { results: askRows } = await env.DB.prepare(
+    `SELECT notice_id, title, agency, source, respond_token, sam_url, matched_reasons
+     FROM opportunities
+     WHERE status = 'approved'
+       AND (
+         (outcome IS NULL AND updated_at IS NOT NULL AND (julianday('now') - julianday(updated_at)) >= ?)
+         OR (outcome = 'pending' AND outcome_check_count < ?
+             AND outcome_check_sent_at IS NOT NULL
+             AND (julianday('now') - julianday(outcome_check_sent_at)) >= ?)
+       )
+     ORDER BY updated_at ASC`,
+  )
+    .bind(OUTCOME_FIRST_CHECK_DAYS, OUTCOME_MAX_CHECKS, OUTCOME_CHECK_INTERVAL_DAYS)
+    .all();
+
+  const asks = askRows || [];
+  if (asks.length > 0) {
+    await sendOutcomeAskDigest(env, asks.map(toOutcomeItem));
+    const now = new Date().toISOString();
+    for (const row of asks) {
+      await env.DB.prepare(
+        `UPDATE opportunities
+         SET outcome = 'pending', outcome_check_count = outcome_check_count + 1,
+             outcome_check_sent_at = ?, outcome_updated_at = ?
+         WHERE notice_id = ?`,
+      )
+        .bind(now, now, row.notice_id)
+        .run();
+    }
+  }
+
+  const { results: meetingRows } = await env.DB.prepare(
+    `SELECT notice_id, title, agency, source, respond_token, sam_url, matched_reasons, meeting_date
+     FROM opportunities
+     WHERE status = 'approved'
+       AND outcome = 'meeting_scheduled'
+       AND meeting_date IS NOT NULL
+       AND date(meeting_date) <= date('now')
+       AND meeting_check_sent_at IS NULL
+     ORDER BY meeting_date ASC`,
+  ).all();
+
+  const meetingChecks = meetingRows || [];
+  if (meetingChecks.length > 0) {
+    await sendMeetingCheckDigest(env, meetingChecks.map(toOutcomeItem));
+    const now = new Date().toISOString();
+    for (const row of meetingChecks) {
+      await env.DB.prepare("UPDATE opportunities SET meeting_check_sent_at = ? WHERE notice_id = ?")
+        .bind(now, row.notice_id)
+        .run();
+    }
+  }
+
+  return { asksSent: asks.length, meetingChecksSent: meetingChecks.length };
+}
+
+function toOutcomeItem(row) {
+  return {
+    id: row.notice_id,
+    token: row.respond_token,
+    title: row.title,
+    agency: row.agency,
+    source: row.source,
+    reasons: JSON.parse(row.matched_reasons || "[]"),
+    url: row.sam_url,
+    meetingDate: row.meeting_date,
+  };
+}
+
+// GET: read-only, renders a confirmation/form page. Actions that need a
+// meeting date get a real <input type="date">; everything else is a plain
+// confirm button — same safe-link pattern as /respond.
+async function renderOutcomeConfirmation(env, url) {
+  const id = url.searchParams.get("id");
+  const token = url.searchParams.get("token");
+  const action = url.searchParams.get("action");
+
+  if (!id || !token || !OUTCOME_ACTIONS.includes(action)) {
+    return htmlResponse("Invalid request.", 400);
+  }
+  const row = await loadRespondRow(env, id, token);
+  if (!row) return htmlResponse("Invalid or expired link.", 403);
+
+  const needsDate = OUTCOME_ACTIONS_NEEDING_DATE.includes(action);
+  const label = {
+    won: "Mark as won — got the contract",
+    lost: "Mark as declined",
+    remind_later: "Remind me later",
+    schedule_meeting: "Record the meeting date",
+    meeting_occurred: "Yes, the meeting happened — draft a follow-up",
+    meeting_reschedule: "No — record a new meeting date",
+    meeting_cancelled: "No meeting will occur",
+  }[action];
+
+  return htmlResponse(
+    `<h2>${escHtml(label)}?</h2>
+     <p>"${escHtml(row.title)}"</p>
+     <form method="post" action="/outcome">
+       <input type="hidden" name="id" value="${escHtml(id)}">
+       <input type="hidden" name="token" value="${escHtml(token)}">
+       <input type="hidden" name="action" value="${escHtml(action)}">
+       ${needsDate ? `<p><label>Meeting date: <input type="date" name="meeting_date" required></label></p>` : ""}
+       <button type="submit" style="background:#0E141B;color:#fff;padding:10px 20px;border:none;border-radius:4px;font-size:15px;cursor:pointer">Confirm</button>
+     </form>`,
+    200,
+  );
+}
+
+// POST: the only path that mutates outcome state, and only from a real
+// form submission.
+async function handleOutcome(env, request, ctx) {
+  const form = await request.formData().catch(() => null);
+  const id = form?.get("id");
+  const token = form?.get("token");
+  const action = form?.get("action");
+  const meetingDate = form?.get("meeting_date");
+
+  if (!id || !token || !OUTCOME_ACTIONS.includes(action)) {
+    return htmlResponse("Invalid request.", 400);
+  }
+  if (OUTCOME_ACTIONS_NEEDING_DATE.includes(action) && !meetingDate) {
+    return htmlResponse("A meeting date is required.", 400);
+  }
+  const row = await loadRespondRow(env, id, token);
+  if (!row) return htmlResponse("Invalid or expired link.", 403);
+
+  const now = new Date().toISOString();
+  let extra = "";
+
+  if (action === "won") {
+    await env.DB.prepare("UPDATE opportunities SET outcome = 'won', outcome_updated_at = ? WHERE notice_id = ?")
+      .bind(now, id)
+      .run();
+  } else if (action === "lost" || action === "meeting_cancelled") {
+    await env.DB.prepare("UPDATE opportunities SET outcome = 'lost', outcome_updated_at = ? WHERE notice_id = ?")
+      .bind(now, id)
+      .run();
+  } else if (action === "remind_later") {
+    await env.DB.prepare(
+      "UPDATE opportunities SET outcome = 'pending', outcome_check_sent_at = ?, outcome_updated_at = ? WHERE notice_id = ?",
+    )
+      .bind(now, now, id)
+      .run();
+  } else if (action === "schedule_meeting" || action === "meeting_reschedule") {
+    await env.DB.prepare(
+      `UPDATE opportunities
+       SET outcome = 'meeting_scheduled', meeting_date = ?, meeting_check_sent_at = NULL, outcome_updated_at = ?
+       WHERE notice_id = ?`,
+    )
+      .bind(meetingDate, now, id)
+      .run();
+  } else if (action === "meeting_occurred") {
+    await env.DB.prepare("UPDATE opportunities SET outcome = 'meeting_held', outcome_updated_at = ? WHERE notice_id = ?")
+      .bind(now, id)
+      .run();
+    if (env.ANTHROPIC_API_KEY) {
+      ctx.waitUntil(
+        draftMeetingFollowup(env, row).catch((err) =>
+          console.error("[aegis-samgov-bot] Meeting follow-up draft failed:", err.message),
+        ),
+      );
+      extra = " Drafting a follow-up e-mail now — check your e-mail in about a minute.";
+    }
+  }
+
+  const summary = {
+    won: "won",
+    lost: "declined",
+    remind_later: "pending — we'll ask again later",
+    schedule_meeting: `meeting scheduled for ${meetingDate}`,
+    meeting_reschedule: `meeting rescheduled to ${meetingDate}`,
+    meeting_occurred: "meeting held",
+    meeting_cancelled: "declined (meeting did not occur)",
+  }[action];
+
+  return htmlResponse(`Marked "${escHtml(row.title)}" as <strong>${escHtml(summary)}</strong>.${extra}`, 200);
+}
+
+// ── Phase 2C: AI-drafted meeting follow-up e-mail ───────────────────────────
+//
+// Triggered when Robert confirms a scheduled meeting actually happened.
+// There is no transcript or notes from the meeting anywhere in this
+// system, so the prompt is explicit that it must not invent anything
+// supposedly discussed or agreed — this is a generic, warm "thank you for
+// your time, here's a next step" draft, not a summary of the conversation.
+
+const LEGAL_MEETING_FOLLOWUP_SYSTEM = `\
+You are drafting a SHORT, formal follow-up e-mail for Robert, an attorney at Newark Firm (general practice), to send after a meeting he already had with this contact about a possible B2B legal relationship. Robert will send this himself from robert@newarkfirm.com. Do NOT mention Aegis, AegisOS, LexFlow, or any software product.
+
+STRICT GROUNDING RULE: you have NO transcript or notes from the meeting -- do not invent anything that was supposedly discussed, decided, or promised. Write a generic, warm, professional thank-you-for-your-time follow-up that references the original context (the role/company from the initial outreach) and proposes a concrete next step (a follow-up call, sending information, or checking back in a set timeframe). Never claim a specific commitment was made.
+
+TONE: formal attorney-to-attorney correspondence, no contractions, no hype, no signature block, 80-140 words.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block"
+}`;
+
+async function draftMeetingFollowup(env, row) {
+  const reasons = JSON.parse(row.matched_reasons || "[]");
+  const isLegal = row.source === "adzuna_legal" || row.source === "usajobs_legal";
+
+  const context = [
+    `Source: ${row.source}`,
+    `Title/company line as recorded: ${row.title}`,
+    row.agency ? `Location/agency: ${row.agency}` : null,
+    `Why this matched: ${reasons.join(", ") || "none recorded"}`,
+    `Excerpt of the original posting/contract description: ${row.description_excerpt || "(none captured)"}`,
+    row.sam_url ? `Source link: ${row.sam_url}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const draft = await callAnthropicForFollowup(env, { context, isLegal });
+  await sendFollowupDraftEmail(env, { row, draft, isLegal });
+}
+
+async function callAnthropicForFollowup(env, { context, isLegal }) {
+  const system = isLegal
+    ? LEGAL_MEETING_FOLLOWUP_SYSTEM
+    : `\
+You are drafting a SHORT, professional follow-up e-mail on behalf of Aegis Global Holdings, for Robert to send after a meeting he already had with this contact.
+
+STRICT GROUNDING RULE: you have NO transcript or notes from the meeting -- do not invent anything that was supposedly discussed, decided, or promised. Write a generic, warm, professional thank-you-for-your-time follow-up that references the original context (why Aegis reached out) and proposes a concrete next step. Never claim a specific commitment was made. You may reference one real Aegis service from this list if it fits (do not invent a service or price not on this list):
+${AEGIS_SERVICES_CONTEXT}
+
+TONE: formal business-development correspondence, no contractions, no hype, no signature block, 90-150 words.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block"
+}`;
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-5",
+      max_tokens: 4096,
+      system,
+      messages: [{ role: "user", content: context }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const raw = data.content?.find((b) => b.type === "text")?.text ?? "";
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    return { parseError: true, raw };
+  }
+}
+
+async function sendFollowupDraftEmail(env, { row, draft, isLegal }) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const senderBanner = isLegal
+    ? `<p style="background:#e8f4fd;border-left:3px solid #0E141B;padding:12px 16px;font-size:13px">
+         📨 This is a Newark Firm draft, not Aegis. <strong>Send it yourself from robert@newarkfirm.com</strong>.
+       </p>`
+    : "";
+
+  const draftHtml = draft.parseError
+    ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
+       <pre style="white-space:pre-wrap;font-size:13px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(draft.raw)}</pre>`
+    : `
+      <p><strong>Suggested subject:</strong> ${escHtml(draft.subject || "")}</p>
+      <div style="background:#f9f9f9;border:1px solid #ddd;padding:16px;white-space:pre-wrap;font-family:sans-serif">${escHtml(draft.body || "")}</div>`;
+
+  await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `${isLegal ? "Newark Firm meeting follow-up (AI, unsent)" : "Meeting follow-up draft (AI, unsent)"} — ${row.title}`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
+        ⚠ AI-drafted, NOT sent to anyone. No meeting notes were available — this is a generic thank-you/next-step follow-up. Edit before sending.
+      </p>
+      ${senderBanner}
+      <h2>${escHtml(row.title)}</h2>
+      ${draftHtml}
+    </div>`,
+    text: `${isLegal ? "NEWARK FIRM DRAFT -- send from robert@newarkfirm.com, not Aegis.\n\n" : ""}AI-drafted meeting follow-up for: ${row.title}\n(NOT sent.)\n\n${JSON.stringify(draft, null, 2)}`,
+  });
+}
+
+// ── Outcome-tracking e-mails ─────────────────────────────────────────────────
+
+async function sendOutcomeAskDigest(env, items) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const cardsHtml = items
+    .map((item) => {
+      const base = `${WORKER_URL}/outcome?id=${encodeURIComponent(item.id)}&token=${item.token}`;
+      return `
+        <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
+          <h3 style="margin:6px 0">${escHtml(item.title)}</h3>
+          <p style="margin:4px 0;color:#555;font-size:14px">${item.agency ? escHtml(item.agency) : ""}</p>
+          <p style="margin:8px 0;font-size:14px">You approved this and an e-mail was drafted. How did it go?</p>
+          <div style="margin-top:12px">
+            <a href="${base}&action=won" style="background:#0E141B;color:#fff;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;margin:0 6px 6px 0;display:inline-block">I got the contract</a>
+            <a href="${base}&action=schedule_meeting" style="background:#0E141B;color:#fff;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;margin:0 6px 6px 0;display:inline-block">Waiting for a meeting</a>
+            <a href="${base}&action=lost" style="background:#f0f0f0;color:#333;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;margin:0 6px 6px 0;display:inline-block">Declined</a>
+            <a href="${base}&action=remind_later" style="background:#f0f0f0;color:#333;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;display:inline-block">Remind me later</a>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  const res = await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `How did it go? ${items.length} approved lead${items.length === 1 ? "" : "s"} to update`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <h2>Status check on approved leads</h2>
+      <p style="color:#555">These were approved and had an e-mail drafted. Let us know where things stand so we can track win rate and follow up at the right time.</p>
+      ${cardsHtml}
+    </div>`,
+    text: items
+      .map(
+        (item) =>
+          `${item.title}\nGot the contract: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=won\nWaiting for a meeting: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=schedule_meeting\nDeclined: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=lost\nRemind me later: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=remind_later`,
+      )
+      .join("\n\n"),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[aegis-samgov-bot] Outcome-ask e-mail failed ${res.status}:`, body);
+  }
+}
+
+async function sendMeetingCheckDigest(env, items) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const cardsHtml = items
+    .map((item) => {
+      const base = `${WORKER_URL}/outcome?id=${encodeURIComponent(item.id)}&token=${item.token}`;
+      return `
+        <div style="border:1px solid #e0e0e0;border-radius:6px;padding:20px;margin-bottom:16px;font-family:sans-serif">
+          <h3 style="margin:6px 0">${escHtml(item.title)}</h3>
+          <p style="margin:4px 0;color:#555;font-size:14px">${item.agency ? escHtml(item.agency) : ""}</p>
+          <p style="margin:8px 0;font-size:14px">Meeting was scheduled for ${escHtml(item.meetingDate)}. Did it happen?</p>
+          <div style="margin-top:12px">
+            <a href="${base}&action=meeting_occurred" style="background:#0E141B;color:#fff;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;margin:0 6px 6px 0;display:inline-block">Yes — draft follow-up</a>
+            <a href="${base}&action=meeting_reschedule" style="background:#f0f0f0;color:#333;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;margin:0 6px 6px 0;display:inline-block">No — new date</a>
+            <a href="${base}&action=meeting_cancelled" style="background:#f0f0f0;color:#333;padding:8px 14px;border-radius:4px;text-decoration:none;font-size:13px;display:inline-block">No meeting will occur</a>
+          </div>
+        </div>`;
+    })
+    .join("");
+
+  const res = await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `Did it happen? ${items.length} meeting${items.length === 1 ? "" : "s"} to confirm`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <h2>Meeting check-in</h2>
+      ${cardsHtml}
+    </div>`,
+    text: items
+      .map(
+        (item) =>
+          `${item.title} (meeting was ${item.meetingDate})\nYes: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=meeting_occurred\nNo, new date: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=meeting_reschedule\nNo meeting: ${WORKER_URL}/outcome?id=${item.id}&token=${item.token}&action=meeting_cancelled`,
+      )
+      .join("\n\n"),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[aegis-samgov-bot] Meeting-check e-mail failed ${res.status}:`, body);
+  }
+}
+
+// ── Weekly pipeline tracking summary ────────────────────────────────────────
+
+async function sendWeeklyTrackingSummary(env) {
+  await ensureOutcomeColumns(env);
+  if (!env.RESEND_API_KEY) return { sent: false };
+
+  const lastRow = await env.DB.prepare("SELECT value FROM bot_meta WHERE key = 'last_summary_sent_at'").first();
+  const since = lastRow?.value || null;
+
+  const { results: counts } = await env.DB.prepare(
+    `SELECT COALESCE(outcome, 'awaiting_check') AS bucket, COUNT(*) AS n
+     FROM opportunities WHERE status = 'approved' GROUP BY bucket`,
+  ).all();
+  const byBucket = Object.fromEntries((counts || []).map((r) => [r.bucket, r.n]));
+
+  const won = byBucket.won || 0;
+  const lost = byBucket.lost || 0;
+  const winRate = won + lost > 0 ? Math.round((won / (won + lost)) * 100) : null;
+
+  const sinceClause = since ? "outcome_updated_at >= ?" : "1 = 1";
+  const { results: sinceRows } = await env.DB.prepare(
+    `SELECT outcome, COUNT(*) AS n FROM opportunities
+     WHERE status = 'approved' AND ${sinceClause} AND outcome IS NOT NULL
+     GROUP BY outcome`,
+  )
+    .bind(...(since ? [since] : []))
+    .all();
+  const sinceByOutcome = Object.fromEntries((sinceRows || []).map((r) => [r.outcome, r.n]));
+
+  const { results: upcoming } = await env.DB.prepare(
+    `SELECT title, meeting_date FROM opportunities
+     WHERE status = 'approved' AND outcome = 'meeting_scheduled' AND date(meeting_date) >= date('now')
+     ORDER BY meeting_date ASC LIMIT 10`,
+  ).all();
+
+  const periodLabel = since ? `since ${since.slice(0, 10)}` : "all time (first summary)";
+
+  const html = `<div style="font-family:sans-serif;max-width:640px">
+    <h2>Lead pipeline tracking</h2>
+    <p style="color:#555">Snapshot of every approved lead's outcome, plus what changed ${escHtml(periodLabel)}.</p>
+    <table style="border-collapse:collapse;font-size:14px;width:100%;margin-bottom:20px">
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Awaiting first check-in</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${byBucket.awaiting_check || 0}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Pending (asked, no answer yet)</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${byBucket.pending || 0}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Meeting scheduled</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${byBucket.meeting_scheduled || 0}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Meeting held (follow-up drafted)</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${byBucket.meeting_held || 0}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Won</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${won}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Declined / Lost</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${lost}</td></tr>
+      ${winRate !== null ? `<tr><td style="padding:6px 10px;font-weight:700">Win rate</td><td style="padding:6px 10px;text-align:right;font-weight:700">${winRate}%</td></tr>` : ""}
+    </table>
+    <p style="font-size:14px"><strong>Changed ${escHtml(periodLabel)}:</strong> ${Object.entries(sinceByOutcome).map(([k, n]) => `${n} → ${escHtml(k)}`).join(", ") || "nothing yet"}</p>
+    ${upcoming?.length ? `<p style="font-size:14px"><strong>Upcoming meetings:</strong></p><ul>${upcoming.map((r) => `<li>${escHtml(r.title)} — ${escHtml(r.meeting_date)}</li>`).join("")}</ul>` : ""}
+    <p style="font-size:13px;color:#888">This runs weekly. Say the word if you'd rather it come every other week, or if the check-in timing (currently ${OUTCOME_FIRST_CHECK_DAYS} days after approval, repeating every ${OUTCOME_CHECK_INTERVAL_DAYS} days, up to ${OUTCOME_MAX_CHECKS} times) needs adjusting.</p>
+  </div>`;
+
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+  await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `Lead tracking summary — ${won} won / ${lost} lost / ${byBucket.pending || 0} pending`,
+    html,
+    text: `Approved leads: awaiting check-in ${byBucket.awaiting_check || 0}, pending ${byBucket.pending || 0}, meeting scheduled ${byBucket.meeting_scheduled || 0}, meeting held ${byBucket.meeting_held || 0}, won ${won}, lost ${lost}.${winRate !== null ? ` Win rate ${winRate}%.` : ""}`,
+  });
+
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "INSERT INTO bot_meta (key, value) VALUES ('last_summary_sent_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+  )
+    .bind(now)
+    .run();
+
+  return { sent: true };
 }
 
 // ── USASpending ingest endpoint (called by GitHub Actions) ─────────────────
