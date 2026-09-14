@@ -239,6 +239,14 @@ async function notifyRobert(env, { subject, html }) {
 }
 
 function sendViaResend(apiKey, payload) {
+  // Same missing-charset bug fixed in aegis-samgov-bot's sendViaResend --
+  // every html payload here is a bare fragment with no declared charset.
+  if (payload.html) {
+    payload = {
+      ...payload,
+      html: `<!doctype html><html><head><meta charset="utf-8"></head><body>${payload.html}</body></html>`,
+    };
+  }
   return fetch(RESEND_API, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

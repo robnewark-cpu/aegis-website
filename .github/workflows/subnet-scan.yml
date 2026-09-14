@@ -75,8 +75,9 @@ jobs:
                   closing_date = strip_tags(cells[1])
                   place = strip_tags(cells[3])
                   naics = strip_tags(cells[4])
-                  contact_m = re.search(r'mailto:[^"]+"[^>]*>(.*?)</a>', cells[5], re.S)
-                  contact_name = strip_tags(contact_m.group(1)) if contact_m else None
+                  contact_m = re.search(r'mailto:([^"]+)"[^>]*>(.*?)</a>', cells[5], re.S)
+                  contact_email = html.unescape(contact_m.group(1)) if contact_m else None
+                  contact_name = strip_tags(contact_m.group(2)) if contact_m else None
                   items.append({
                       "url": url_path,
                       "title": title,
@@ -86,6 +87,7 @@ jobs:
                       "placeOfPerformance": place,
                       "naicsCode": naics,
                       "pointOfContactName": contact_name,
+                      "pointOfContactEmail": contact_email,
                   })
               return items
 
