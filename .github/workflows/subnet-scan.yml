@@ -1,0 +1,123 @@
+name: SBA SubNet subcontracting-opportunities scan
+
+# SubNet (legacy.sba.gov/.../subcontracting-opportunities) 403s every
+# request from Cloudflare Workers -- confirmed by testing, same class of
+# problem as USASpending.gov (see usaspending-scan.yml / that Worker's
+# src/index.js file header). GitHub Actions runners reach it fine with a
+# browser-like User-Agent. There's no JSON API here -- it's a Drupal Views
+# HTML table -- so this workflow parses the table itself with a small
+# Python script and forwards structured results to aegis-samgov-bot, which
+# does the actual per-business scoring, D1 storage, and digest e-mail.
+#
+# SubNet's own keyword search is loose (a plain "IT" search returned an
+# unrelated HVAC-replacement listing in testing), so the keyword list below
+# is just a fetch filter to keep result volume reasonable -- real
+# relevance filtering happens in the Worker's scoreItem(), same as every
+# other source.
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # same daily cadence as the SAM.gov cron
+  workflow_dispatch: {} # lets you trigger a manual test run from the Actions tab
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and parse SubNet listings per business
+        run: |
+          python3 <<'PYEOF'
+          import json
+          import re
+          import html
+          import urllib.request
+          import urllib.parse
+
+          BASE = "https://legacy.sba.gov/federal-contracting/contracting-guide/prime-subcontracting/subcontracting-opportunities"
+
+          # One or two keywords per business -- kept short since SubNet's
+          # own matching is loose; the Worker re-scores everything anyway.
+          SEARCHES = {
+              "aegis": ["compliance", "cybersecurity", "cloud"],
+              "loanservicing": ["loan servicing", "mortgage servicing"],
+              "modmediations": ["mediation", "arbitration"],
+              "newarkfirm": ["attorney", "legal services"],
+          }
+
+          def fetch(keyword):
+              url = f"{BASE}?keyword={urllib.parse.quote(keyword)}&state=All"
+              req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  return resp.read().decode("utf-8", errors="replace")
+
+          def strip_tags(s):
+              return html.unescape(re.sub(r"<[^>]+>", " ", s)).strip()
+
+          def parse_rows(page_html):
+              m = re.search(r"<tbody>(.*?)</tbody>", page_html, re.S)
+              if not m:
+                  return []
+              rows = re.findall(r"<tr>(.*?)</tr>", m.group(1), re.S)
+              items = []
+              for row in rows:
+                  cells = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)
+                  if len(cells) < 6:
+                      continue
+                  desc_cell = cells[0]
+                  title_m = re.search(r'<a href="([^"]+)"[^>]*>(.*?)</a>', desc_cell, re.S)
+                  if not title_m:
+                      continue
+                  url_path, title = title_m.group(1), strip_tags(title_m.group(2))
+                  biz_m = re.search(r'subnet_business_name">(.*?)</span>', desc_cell, re.S)
+                  prime = strip_tags(biz_m.group(1)) if biz_m else None
+                  desc_m = re.search(r"<p>(.*?)</p>", desc_cell, re.S)
+                  description = strip_tags(desc_m.group(1)) if desc_m else ""
+                  closing_date = strip_tags(cells[1])
+                  place = strip_tags(cells[3])
+                  naics = strip_tags(cells[4])
+                  contact_m = re.search(r'mailto:[^"]+"[^>]*>(.*?)</a>', cells[5], re.S)
+                  contact_name = strip_tags(contact_m.group(1)) if contact_m else None
+                  items.append({
+                      "url": url_path,
+                      "title": title,
+                      "primeContractor": prime,
+                      "description": description,
+                      "closingDate": closing_date,
+                      "placeOfPerformance": place,
+                      "naicsCode": naics,
+                      "pointOfContactName": contact_name,
+                  })
+              return items
+
+          seen_urls = set()
+          all_results = []
+          for business, keywords in SEARCHES.items():
+              for kw in keywords:
+                  try:
+                      page = fetch(kw)
+                  except Exception as e:
+                      print(f"fetch failed for {business}/{kw}: {e}")
+                      continue
+                  for item in parse_rows(page):
+                      if item["url"] in seen_urls:
+                          continue
+                      seen_urls.add(item["url"])
+                      item["business"] = business
+                      all_results.append(item)
+
+          print(f"Collected {len(all_results)} unique SubNet listings across {len(SEARCHES)} businesses")
+          with open("subnet-raw.json", "w") as f:
+              json.dump({"results": all_results}, f)
+          PYEOF
+
+          cat subnet-raw.json | head -c 500
+
+      - name: Forward results to aegis-samgov-bot for scoring + digest
+        env:
+          INGEST_SECRET: ${{ secrets.USASPENDING_INGEST_SECRET }}
+        run: |
+          curl -sS -X POST https://aegis-samgov-bot.robert-bb6.workers.dev/ingest-subnet \
+            -H "Content-Type: application/json" \
+            -H "X-Ingest-Secret: $INGEST_SECRET" \
+            --data-binary @subnet-raw.json \
+            -w "\nWorker response status: %{http_code}\n"
