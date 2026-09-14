@@ -107,6 +107,8 @@ const KEYWORD_RULES = [
   { term: "software development", weight: 10, label: "Software Development" },
   { term: "web application", weight: 5, label: "Web/Digital" },
   { term: "website", weight: 5, label: "Web/Digital" },
+  { term: "payment processing", weight: 20, label: "Payment Processing" },
+  { term: "billing system", weight: 15, label: "Billing System" },
 ];
 
 // Robert also owns three other businesses. Each gets its own NAICS codes
