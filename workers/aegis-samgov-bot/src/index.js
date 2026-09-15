@@ -310,6 +310,21 @@ export default {
       return jsonResponse(result);
     }
 
+    // Manual recovery: e-mails every currently-stuck status='new' item
+    // scoring at or above threshold, regardless of how long it's been
+    // sitting there. Exists because a scan can insert qualifying items and
+    // then die before sendDigestEmail runs (a crash mid-batch, a Resend
+    // hiccup) -- those items are already in D1, so future scans skip them
+    // as not-new forever, and sendFollowUpReminders won't touch them until
+    // REMINDER_FIRST_AFTER_DAYS has elapsed. Call this by hand any time you
+    // suspect a digest didn't go out (safe to run repeatedly -- Approve/
+    // Decline/Save all flip status away from "new", so an actioned item
+    // won't appear in the next call).
+    if (request.method === "GET" && url.pathname === "/send-catchup-digest") {
+      const result = await sendCatchupDigest(env);
+      return jsonResponse(result);
+    }
+
     // Manual triggers for testing outcome tracking without waiting for the
     // cron or for the configured day thresholds to actually elapse.
     if (request.method === "GET" && url.pathname === "/check-outcomes-now") {
@@ -625,6 +640,51 @@ async function ensureOutcomeColumns(env) {
       if (!/duplicate column/i.test(err.message)) throw err;
     }
   }
+}
+
+// See the /send-catchup-digest route comment for why this exists. Reuses
+// sendDigestEmail exactly -- same template, same Approve/Decline/Save/
+// software-pitch links -- just sourced from D1 instead of a fresh scan.
+async function sendCatchupDigest(env) {
+  if (!env.RESEND_API_KEY) return { sent: 0 };
+
+  const threshold = Number(env.SCORE_THRESHOLD || "20");
+  const { results } = await env.DB.prepare(
+    `SELECT notice_id, title, agency, source, score, matched_reasons, respond_token,
+            sam_url, response_deadline, award_amount, naics_code, set_aside, business
+     FROM opportunities
+     WHERE status = 'new' AND score >= ?
+     ORDER BY score DESC`,
+  )
+    .bind(threshold)
+    .all();
+
+  if (results.length === 0) return { sent: 0 };
+
+  const items = results.map((row) => ({
+    id: row.notice_id,
+    token: row.respond_token,
+    title: row.title,
+    agency: row.agency,
+    source: row.source,
+    score: row.score,
+    reasons: JSON.parse(row.matched_reasons || "[]"),
+    url: row.sam_url,
+    responseDeadline: row.response_deadline,
+    awardAmount: row.award_amount,
+    naicsCode: row.naics_code,
+    setAside: row.set_aside,
+    business: row.business,
+  }));
+
+  // A big catch-up batch as one e-mail risks Gmail's ~102KB clipping
+  // threshold, which would silently hide the Approve/Decline links below
+  // the fold -- split into pages instead.
+  const CATCHUP_BATCH_SIZE = 25;
+  for (let i = 0; i < items.length; i += CATCHUP_BATCH_SIZE) {
+    await sendDigestEmail(env, items.slice(i, i + CATCHUP_BATCH_SIZE));
+  }
+  return { sent: items.length };
 }
 
 // Finds approved leads due for a status check-in (never asked, or asked
