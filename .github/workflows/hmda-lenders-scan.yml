@@ -1,0 +1,121 @@
+name: HMDA lender prospecting scan
+
+# Robert's ask: a real prospect list of mortgage lenders in OK/TX, to pitch
+# either the LoanServ demo or Veteran Loan Servicing's outsourced servicing
+# itself -- unlike every other loan-servicing lead so far (a job posting or
+# a federal solicitation), this is a direct company list, not a signal.
+#
+# Source: the CFPB's public HMDA (Home Mortgage Disclosure Act) filers API
+# (ffiec.cfpb.gov) -- every institution that reported mortgage activity in a
+# given state/year, with loan count. No API key required.
+#
+# Answered fine over plain HTTPS when tested, but per this repo's established
+# pattern for every other bulk external source (USASpending 525s, SubNet
+# 403s, both specifically from Cloudflare's edge, not from a normal network),
+# this workflow does the fetch/filter here rather than assuming
+# aegis-samgov-bot's Worker can reach it in production, and forwards
+# structured results to POST /ingest-hmda-lenders (same INGEST_SECRET as
+# every other ingest endpoint). The Worker does the actual scoring, D1
+# storage, and digest e-mail.
+#
+# HMDA data is published annually and does not change week to week, so this
+# runs weekly, not daily -- a daily run would just refetch and dedup away
+# the same institutions. The count band and per-state cap below keep the
+# first run's one-time volume manageable (see ingestAndNotify's
+# sendDigestEmailBatched call in src/index.js for how a big first batch is
+# split across e-mails).
+
+on:
+  schedule:
+    - cron: "5 13 * * 1" # Mondays, a few minutes after the other crons
+  workflow_dispatch: {} # lets you trigger a manual test run from the Actions tab
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and filter HMDA-reporting lenders in OK and TX
+        env:
+          HMDA_YEAR: "2025"
+          HMDA_STATES: "OK,TX"
+          # Loan-count band: excludes one-off noise (a handful of loans a
+          # year is not an ongoing business) and mega-national servicers
+          # (thousands of loans a year -- they already have in-house
+          # servicing, and cold-pitching them is a waste of a send).
+          # Targets active regional/local lenders who plausibly outsource.
+          HMDA_MIN_LOANS: "30"
+          HMDA_MAX_LOANS: "200"
+          # Per-state cap on a single run, highest-volume first -- keeps a
+          # first-run backlog to a manageable size instead of dumping every
+          # qualifying lender (400+) into the digest in one shot. Any lender
+          # already ingested is skipped forever after (dedup by LEI+year in
+          # D1), so raise this later to reach further down the list.
+          HMDA_PER_STATE_CAP: "40"
+        run: |
+          python3 <<'PYEOF'
+          import json
+          import os
+          import time
+          import urllib.request
+
+          YEAR = os.environ["HMDA_YEAR"]
+          STATES = os.environ["HMDA_STATES"].split(",")
+          MIN_LOANS = int(os.environ["HMDA_MIN_LOANS"])
+          MAX_LOANS = int(os.environ["HMDA_MAX_LOANS"])
+          PER_STATE_CAP = int(os.environ["HMDA_PER_STATE_CAP"])
+
+          def fetch_filers(state):
+              # ffiec.cfpb.gov's WAF intermittently 403s a request for no
+              # consistent reason (confirmed: retrying the exact same
+              # request, with or without a User-Agent, succeeds) -- a few
+              # retries with backoff clears it. A bare "Mozilla/5.0" UA in
+              # particular is unreliable here; omit it rather than send one.
+              url = f"https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states={state}&years={YEAR}"
+              last_err = None
+              for attempt in range(4):
+                  try:
+                      req = urllib.request.Request(url)
+                      with urllib.request.urlopen(req, timeout=30) as resp:
+                          return json.load(resp).get("institutions", [])
+                  except Exception as e:
+                      last_err = e
+                      if attempt < 3:
+                          time.sleep(2 ** attempt)
+              raise last_err
+
+          all_results = []
+          for state in STATES:
+              try:
+                  institutions = fetch_filers(state)
+              except Exception as e:
+                  print(f"fetch failed for {state}: {e}")
+                  continue
+              in_band = [i for i in institutions if MIN_LOANS <= i.get("count", 0) <= MAX_LOANS]
+              in_band.sort(key=lambda i: i["count"], reverse=True)
+              top = in_band[:PER_STATE_CAP]
+              print(f"{state}: {len(institutions)} total filers, {len(in_band)} in {MIN_LOANS}-{MAX_LOANS} loan band, taking top {len(top)}")
+              for inst in top:
+                  all_results.append({
+                      "lei": inst["lei"],
+                      "name": inst["name"],
+                      "count": inst["count"],
+                      "state": state,
+                      "year": YEAR,
+                  })
+
+          print(f"Collected {len(all_results)} candidate lenders across {len(STATES)} states")
+          with open("hmda-lenders-raw.json", "w") as f:
+              json.dump({"results": all_results}, f)
+          PYEOF
+
+          cat hmda-lenders-raw.json | head -c 500
+
+      - name: Forward results to aegis-samgov-bot for scoring + digest
+        env:
+          INGEST_SECRET: ${{ secrets.USASPENDING_INGEST_SECRET }}
+        run: |
+          curl -sS -X POST https://aegis-samgov-bot.robert-bb6.workers.dev/ingest-hmda-lenders \
+            -H "Content-Type: application/json" \
+            -H "X-Ingest-Secret: $INGEST_SECRET" \
+            --data-binary @hmda-lenders-raw.json \
+            -w "\nWorker response status: %{http_code}\n"
