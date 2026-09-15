@@ -2120,12 +2120,19 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
 // products), never Newark Firm.
 //
 // LexFlow has real published pricing (lexflow.html#pricing) to quote.
-// LoanServ does not -- fees.html is explicit that it "stays a demo"
-// because ACH is not live, so its pitch never quotes a price and only
-// proposes a demo. (Per Robert: ACH is actually built, just deliberately
-// not switched on -- doesn't change what a prospect can use today, so the
-// pitch still says "not live" rather than claiming a capability no one can
-// actually turn on for them.)
+// LoanServ does not -- fees.html is explicit that it "stays a demo," so its
+// pitch never quotes a price and only proposes a demo.
+//
+// Per Robert's explicit call: the LoanServ pitch (draft-to-Robert-for-review,
+// not auto-sent) may list ACH as a standard LoanServ capability -- this
+// differs from every other external surface (fees.html, aegispay.html,
+// loanserv.html, and the checklist/outreach pitch in this file), which all
+// still say ACH is not live. Only this specific pitch prompt carries the
+// exception, per his instruction.
+//
+// LexFlow's pitch may mention CounselAI at a high level (an AI research/
+// drafting layer on the roadmap for LexFlow firms) -- no feature specifics,
+// matching counselai.html's own "concept, no published spec" stance.
 
 const LEXFLOW_PITCH_SYSTEM = `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LexFlow (a legal practice management software product on AegisOS) to a law firm, for Robert (the owner) to review before sending.
@@ -2134,14 +2141,15 @@ STRICT GROUNDING RULE: use only the facts given below about the recipient firm (
 - Features: client and matter management, automated conflict checking, trust/IOLTA three-way reconciliation, billing, client portal and secure messaging, document automation, e-signature.
 - Pricing: LexFlow Solo $39/mo, LexFlow Professional $99/mo, LexFlow Unlimited $179/mo, LexFlow Firm $199/seat/mo (for multi-attorney firms).
 - Not included: ACH origination, custody of client funds, FedRAMP or HIPAA certification.
+- Roadmap, mention at most once and only in passing, no feature list: CounselAI, an AI-assisted legal research and drafting layer planned for LexFlow firms. It is not released, has no price, and must never be described with specific features, a capability claim, or a release date -- point interested firms to counselai.html rather than elaborating.
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
 - No standalone greeting like "Hello," or "Hi," on its own line.
 - No contractions anywhere.
 - No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
 - Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
-- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), a brief introduction of LexFlow and Aegis Global Holdings, ONE pricing tier that plausibly fits the firm's apparent size (a solo hire suggests Solo or Professional; a multi-attorney signal suggests Firm), and a single next step (see pricing at lexflow.html#pricing, or book a demo). No signature block.
-- 120-180 words.
+- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), a brief introduction of LexFlow and Aegis Global Holdings, ONE pricing tier that plausibly fits the firm's apparent size (a solo hire suggests Solo or Professional; a multi-attorney signal suggests Firm), an optional brief nod to the CounselAI roadmap item above, and a single next step (see pricing at lexflow.html#pricing, or book a demo). No signature block.
+- 120-190 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME firm -- write ONE combined e-mail, not two pitches stitched together.
 
@@ -2155,8 +2163,7 @@ const LOANSERV_PITCH_SYSTEM = `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LoanServ (a lending/loan-servicing operations software product on AegisOS) to a lender, for Robert (the owner) to review before sending.
 
 STRICT GROUNDING RULE: use only the facts given below about the recipient (do not invent their loan volume, portfolio, or internal operations). Only cite these real, published LoanServ facts -- never invent a feature or price:
-- Generally available for records, billing, a double-entry general ledger, and audit log.
-- ACH processing is NOT live yet -- never claim ACH, payment processing, or loan origination capability.
+- Generally available for records, billing, a double-entry general ledger, ACH payment processing, and audit log.
 - No published price list -- LoanServ is evaluated through a live demo, not a self-serve price. Never quote a number.
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
@@ -2164,7 +2171,7 @@ TONE AND STYLE -- formal business-development correspondence that reads like a s
 - No contractions anywhere.
 - No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
 - Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
-- Cover, in whatever order feels natural: why you are writing (the lender's apparent hiring/growth signal, if given), a brief introduction of LoanServ and Aegis Global Holdings, what it actually does (records, billing, ledger, audit log), and a single next step: book a demo (book-demo.html?module=LoanServ). No signature block.
+- Cover, in whatever order feels natural: why you are writing (the lender's apparent hiring/growth signal, if given), a brief introduction of LoanServ and Aegis Global Holdings, what it actually does (records, billing, ledger, ACH, audit log), and a single next step: book a demo (book-demo.html?module=LoanServ). No signature block.
 - 100-160 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME lender -- write ONE combined e-mail, not two pitches stitched together.
