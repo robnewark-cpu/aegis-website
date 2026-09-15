@@ -1481,12 +1481,18 @@ function scoreItem(item) {
 
 // ── Approve / decline / save ────────────────────────────────────────────────
 
-const RESPOND_ACTIONS = ["approve", "decline", "save", "approve_software"];
+const RESPOND_ACTIONS = ["approve", "decline", "save", "approve_software", "approve_counselai"];
 // Which prospect-source leads get a second "pitch our software" button in
 // the digest, alongside the existing Newark Firm B2B / loan-servicing-
 // outsourcing pitch -- Robert's explicit choice: offer both, don't replace
 // either, so he can pick per lead (or approve both for a two-touch approach).
 const SOFTWARE_PITCH_BUSINESSES = ["newarkfirm", "loanservicing"];
+// CounselAI is offered as its own separate pitch (a third button), not just
+// folded into the LexFlow pitch -- Newark Firm leads only, since it is a
+// legal-research/drafting product. Still the same high-level, no-price,
+// no-specific-features framing as the CounselAI mention inside the LexFlow
+// pitch -- only how it's offered changes, not what's claimed.
+const COUNSELAI_PITCH_BUSINESSES = ["newarkfirm"];
 
 async function loadRespondRow(env, id, token) {
   const row = await env.DB
@@ -1519,6 +1525,7 @@ async function renderRespondConfirmation(env, url) {
     action === "approve" ? "Approve" :
     action === "decline" ? "Decline" :
     action === "approve_software" ? "Approve & draft software pitch" :
+    action === "approve_counselai" ? "Approve & draft CounselAI pitch" :
     "Save for later";
   return htmlResponse(
     `<h2 style="margin:0 0 12px">${verb}?</h2>
@@ -1548,7 +1555,7 @@ async function handleRespond(env, request, ctx) {
   if (!row) return htmlResponse("Invalid or expired link.", 403);
 
   const status =
-    action === "approve" || action === "approve_software" ? "approved" :
+    action === "approve" || action === "approve_software" || action === "approve_counselai" ? "approved" :
     action === "decline" ? "declined" :
     "saved";
   await env.DB.prepare("UPDATE opportunities SET status = ?, updated_at = datetime('now') WHERE notice_id = ?")
@@ -1583,6 +1590,13 @@ async function handleRespond(env, request, ctx) {
       ),
     );
     extra = " Drafting a software pitch now — check your e-mail in about a minute.";
+  } else if (action === "approve_counselai" && env.ANTHROPIC_API_KEY) {
+    ctx.waitUntil(
+      draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch((err) =>
+        console.error("[aegis-samgov-bot] CounselAI pitch draft failed:", err.message),
+      ),
+    );
+    extra = " Drafting a CounselAI pitch now — check your e-mail in about a minute.";
   }
 
   return htmlResponse(
@@ -2120,9 +2134,19 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
 // products), never Newark Firm.
 //
 // LexFlow has real published pricing (lexflow.html#pricing) to quote.
-// LoanServ does not -- fees.html is explicit that it "stays a demo"
-// because ACH is not live, so its pitch never quotes a price and only
-// proposes a demo.
+// LoanServ does not -- fees.html is explicit that it "stays a demo," so its
+// pitch never quotes a price and only proposes a demo.
+//
+// Per Robert's explicit call: the LoanServ pitch (draft-to-Robert-for-review,
+// not auto-sent) may list ACH as a standard LoanServ capability -- this
+// differs from every other external surface (fees.html, aegispay.html,
+// loanserv.html, and the checklist/outreach pitch in this file), which all
+// still say ACH is not live. Only this specific pitch prompt carries the
+// exception, per his instruction.
+//
+// LexFlow's pitch may mention CounselAI at a high level (an AI research/
+// drafting layer on the roadmap for LexFlow firms) -- no feature specifics,
+// matching counselai.html's own "concept, no published spec" stance.
 
 const LEXFLOW_PITCH_SYSTEM = `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LexFlow (a legal practice management software product on AegisOS) to a law firm, for Robert (the owner) to review before sending.
@@ -2131,14 +2155,15 @@ STRICT GROUNDING RULE: use only the facts given below about the recipient firm (
 - Features: client and matter management, automated conflict checking, trust/IOLTA three-way reconciliation, billing, client portal and secure messaging, document automation, e-signature.
 - Pricing: LexFlow Solo $39/mo, LexFlow Professional $99/mo, LexFlow Unlimited $179/mo, LexFlow Firm $199/seat/mo (for multi-attorney firms).
 - Not included: ACH origination, custody of client funds, FedRAMP or HIPAA certification.
+- Roadmap, mention at most once and only in passing, no feature list: CounselAI, an AI-assisted legal research and drafting layer planned for LexFlow firms. It is not released, has no price, and must never be described with specific features, a capability claim, or a release date -- point interested firms to counselai.html rather than elaborating.
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
 - No standalone greeting like "Hello," or "Hi," on its own line.
 - No contractions anywhere.
 - No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
 - Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
-- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), a brief introduction of LexFlow and Aegis Global Holdings, ONE pricing tier that plausibly fits the firm's apparent size (a solo hire suggests Solo or Professional; a multi-attorney signal suggests Firm), and a single next step (see pricing at lexflow.html#pricing, or book a demo). No signature block.
-- 120-180 words.
+- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), a brief introduction of LexFlow and Aegis Global Holdings, ONE pricing tier that plausibly fits the firm's apparent size (a solo hire suggests Solo or Professional; a multi-attorney signal suggests Firm), an optional brief nod to the CounselAI roadmap item above, and a single next step (see pricing at lexflow.html#pricing, or book a demo). No signature block.
+- 120-190 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME firm -- write ONE combined e-mail, not two pitches stitched together.
 
@@ -2152,8 +2177,7 @@ const LOANSERV_PITCH_SYSTEM = `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LoanServ (a lending/loan-servicing operations software product on AegisOS) to a lender, for Robert (the owner) to review before sending.
 
 STRICT GROUNDING RULE: use only the facts given below about the recipient (do not invent their loan volume, portfolio, or internal operations). Only cite these real, published LoanServ facts -- never invent a feature or price:
-- Generally available for records, billing, a double-entry general ledger, and audit log.
-- ACH processing is NOT live yet -- never claim ACH, payment processing, or loan origination capability.
+- Generally available for records, billing, a double-entry general ledger, ACH payment processing, and audit log.
 - No published price list -- LoanServ is evaluated through a live demo, not a self-serve price. Never quote a number.
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
@@ -2161,7 +2185,7 @@ TONE AND STYLE -- formal business-development correspondence that reads like a s
 - No contractions anywhere.
 - No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
 - Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
-- Cover, in whatever order feels natural: why you are writing (the lender's apparent hiring/growth signal, if given), a brief introduction of LoanServ and Aegis Global Holdings, what it actually does (records, billing, ledger, audit log), and a single next step: book a demo (book-demo.html?module=LoanServ). No signature block.
+- Cover, in whatever order feels natural: why you are writing (the lender's apparent hiring/growth signal, if given), a brief introduction of LoanServ and Aegis Global Holdings, what it actually does (records, billing, ledger, ACH, audit log), and a single next step: book a demo (book-demo.html?module=LoanServ). No signature block.
 - 100-160 words.
 
 MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME lender -- write ONE combined e-mail, not two pitches stitched together.
@@ -2172,12 +2196,43 @@ Respond with ONLY a raw JSON object, no markdown fences:
   "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
 }`;
 
-async function draftSoftwarePitch(env, id, row) {
-  if (!SOFTWARE_PITCH_BUSINESSES.includes(row.business)) {
+const COUNSELAI_PITCH_SYSTEM = `\
+You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, introducing CounselAI (an AI-assisted legal research and drafting concept planned for AegisOS) to a law firm, for Robert (the owner) to review before sending.
+
+STRICT GROUNDING RULE: CounselAI is an unreleased concept with no published specification, no price, and no committed release date (see counselai.html). Never invent a feature, a capability claim, a release date, or a price. Only these facts exist:
+- CounselAI is being explored as a matter-aware AI research and drafting layer for attorneys, built to work from a firm's own matter data rather than as a general-purpose chatbot -- concept only, nothing released.
+- The generally available legal product on AegisOS today is LexFlow (case/matter management, conflict checking, trust/IOLTA reconciliation, billing, client portal, document automation, e-signature).
+- Next step: point the firm to counselai.html to register interest, and offer a LexFlow demo today in the meantime.
+
+TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
+- No standalone greeting like "Hello," or "Hi," on its own line.
+- No contractions anywhere.
+- No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
+- Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
+- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), that Aegis is exploring CounselAI as described above, and a single next step (see counselai.html, or book a LexFlow demo today). No signature block.
+- 90-140 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME firm -- write ONE combined e-mail, not two pitches stitched together.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
+}`;
+
+async function draftSoftwarePitch(env, id, row, options = {}) {
+  const product = options.product || (row.business === "newarkfirm" ? "LexFlow" : "LoanServ");
+  if (product === "CounselAI") {
+    if (!COUNSELAI_PITCH_BUSINESSES.includes(row.business)) {
+      throw new Error(`CounselAI pitch is only defined for Newark Firm leads, got business "${row.business}"`);
+    }
+  } else if (!SOFTWARE_PITCH_BUSINESSES.includes(row.business)) {
     throw new Error(`No software pitch defined for business "${row.business}"`);
   }
-  const product = row.business === "newarkfirm" ? "LexFlow" : "LoanServ";
-  const system = row.business === "newarkfirm" ? LEXFLOW_PITCH_SYSTEM : LOANSERV_PITCH_SYSTEM;
+  const system =
+    product === "CounselAI" ? COUNSELAI_PITCH_SYSTEM :
+    product === "LexFlow" ? LEXFLOW_PITCH_SYSTEM :
+    LOANSERV_PITCH_SYSTEM;
   const context = describeOpportunity(row);
 
   const res = await fetch(ANTHROPIC_API, {
@@ -2264,6 +2319,8 @@ async function sendDigestEmail(env, items) {
       const softwareUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_software`;
       const softwareProduct = item.business === "newarkfirm" ? "LexFlow" : item.business === "loanservicing" ? "LoanServ" : null;
       const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
+      const counselaiUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_counselai`;
+      const showCounselaiButton = COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source);
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2311,6 +2368,7 @@ async function sendDigestEmail(env, items) {
           <div style="margin-top:12px">
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
             ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
+            ${showCounselaiButton ? `<a href="${counselaiUrl}" style="background:#5e35b1;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch CounselAI</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
@@ -2337,7 +2395,11 @@ async function sendDigestEmail(env, items) {
           softwareProduct && PROSPECT_SOURCES.includes(item.source)
             ? `\nPitch ${softwareProduct}: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve_software`
             : "";
-        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve${softwareLine}\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
+        const counselaiLine =
+          COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source)
+            ? `\nPitch CounselAI: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve_counselai`
+            : "";
+        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve${softwareLine}${counselaiLine}\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
       })
       .join("\n\n"),
   });
@@ -2360,6 +2422,8 @@ async function sendReminderDigestEmail(env, items) {
       const softwareUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_software`;
       const softwareProduct = item.business === "newarkfirm" ? "LexFlow" : item.business === "loanservicing" ? "LoanServ" : null;
       const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
+      const counselaiUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_counselai`;
+      const showCounselaiButton = COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source);
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2384,6 +2448,7 @@ async function sendReminderDigestEmail(env, items) {
           <div style="margin-top:12px">
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
             ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
+            ${showCounselaiButton ? `<a href="${counselaiUrl}" style="background:#5e35b1;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch CounselAI</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
