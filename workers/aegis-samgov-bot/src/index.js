@@ -2122,7 +2122,10 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
 // LexFlow has real published pricing (lexflow.html#pricing) to quote.
 // LoanServ does not -- fees.html is explicit that it "stays a demo"
 // because ACH is not live, so its pitch never quotes a price and only
-// proposes a demo.
+// proposes a demo. (Per Robert: ACH is actually built, just deliberately
+// not switched on -- doesn't change what a prospect can use today, so the
+// pitch still says "not live" rather than claiming a capability no one can
+// actually turn on for them.)
 
 const LEXFLOW_PITCH_SYSTEM = `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LexFlow (a legal practice management software product on AegisOS) to a law firm, for Robert (the owner) to review before sending.
