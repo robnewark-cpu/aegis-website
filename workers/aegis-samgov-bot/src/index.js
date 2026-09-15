@@ -363,7 +363,9 @@ async function runScan(env) {
 
   if (env.ADZUNA_APP_ID && env.ADZUNA_APP_KEY) {
     try {
-      allItems.push(...(await scanAdzuna(env)));
+      const { items, errors } = await scanAdzuna(env);
+      allItems.push(...items);
+      fetchErrors.push(...errors.map((e) => `Adzuna: ${e}`));
     } catch (err) {
       fetchErrors.push(`Adzuna: ${err.message}`);
     }
@@ -1300,31 +1302,57 @@ const LEGAL_TITLE_PATTERN = /\battorney\b|\bcounsel\b|\besq\.?\b/i;
 const ADZUNA_LOANSERVICING_LOCATIONS = ["Texas", "Oklahoma"];
 const LOANSERVICING_TITLE_PATTERN = /\bloan servicing\b|\bmortgage servicing\b|\bservicing specialist\b|\bdefault servicing\b|\bloss mitigation\b/i;
 
+// Each of the calls below hits Adzuna separately (4 keyword searches + 5
+// legal-hiring locations + 2 loan-servicing locations = 11 total). They used
+// to share one try/catch at the call site in runScan(), so a single
+// transient failure on any one of the 11 (e.g. an Adzuna-side 503) threw and
+// discarded all 11 for the day. Each call is now isolated so one failure
+// only costs that one search; the rest still make it into the digest, and
+// callers see exactly which one(s) failed via the returned `errors` array.
 async function scanAdzuna(env) {
   const items = [];
+  const errors = [];
+
+  async function tryFetch(params, label, onResult) {
+    let results;
+    try {
+      results = await fetchAdzuna(env, params);
+    } catch (err) {
+      errors.push(`${label}: ${err.message}`);
+      return;
+    }
+    for (const r of results) onResult(r);
+  }
 
   for (const keyword of ADZUNA_LEAD_KEYWORDS) {
-    const results = await fetchAdzuna(env, { what: keyword, max_days_old: 2, results_per_page: 20 });
-    for (const r of results) items.push(mapAdzunaResult(r, "adzuna", null));
+    await tryFetch({ what: keyword, max_days_old: 2, results_per_page: 20 }, `keyword "${keyword}"`, (r) =>
+      items.push(mapAdzunaResult(r, "adzuna", null)),
+    );
   }
 
   for (const location of ADZUNA_LEGAL_LOCATIONS) {
-    const results = await fetchAdzuna(env, { what: "attorney", where: location, max_days_old: 2, results_per_page: 20 });
-    for (const r of results) {
-      if (!LEGAL_TITLE_PATTERN.test(r.title || "")) continue;
-      items.push(mapAdzunaResult(r, "adzuna_legal", `Legal Hiring Signal (${location})`));
-    }
+    await tryFetch(
+      { what: "attorney", where: location, max_days_old: 2, results_per_page: 20 },
+      `legal/${location}`,
+      (r) => {
+        if (!LEGAL_TITLE_PATTERN.test(r.title || "")) return;
+        items.push(mapAdzunaResult(r, "adzuna_legal", `Legal Hiring Signal (${location})`));
+      },
+    );
   }
 
   for (const location of ADZUNA_LOANSERVICING_LOCATIONS) {
-    const results = await fetchAdzuna(env, { what: "loan servicing", where: location, max_days_old: 2, results_per_page: 20 });
-    for (const r of results) {
-      if (!LOANSERVICING_TITLE_PATTERN.test(r.title || "")) continue;
-      items.push(mapAdzunaResult(r, "adzuna_loanservicing", `Loan Servicing Hiring Signal (${location})`));
-    }
+    await tryFetch(
+      { what: "loan servicing", where: location, max_days_old: 2, results_per_page: 20 },
+      `loan servicing/${location}`,
+      (r) => {
+        if (!LOANSERVICING_TITLE_PATTERN.test(r.title || "")) return;
+        items.push(mapAdzunaResult(r, "adzuna_loanservicing", `Loan Servicing Hiring Signal (${location})`));
+      },
+    );
   }
 
-  return items;
+  return { items, errors };
 }
 
 async function fetchAdzuna(env, params) {
