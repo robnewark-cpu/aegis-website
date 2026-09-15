@@ -338,12 +338,35 @@ export default {
 
   async scheduled(event, env, ctx) {
     if (event.cron === WEEKLY_SUMMARY_CRON) {
-      ctx.waitUntil(sendWeeklyTrackingSummary(env));
+      ctx.waitUntil(runPhase(env, "Weekly tracking summary", sendWeeklyTrackingSummary));
     } else {
-      ctx.waitUntil(runDailyJobs(env));
+      ctx.waitUntil(runPhase(env, "Daily jobs (schema setup)", runDailyJobs));
     }
   },
 };
+
+// Every scheduled entry point used to have no top-level error handling: an
+// uncaught exception anywhere in a phase (a bad AI call, a malformed row,
+// anything) silently killed that phase with nothing but a Cloudflare
+// dashboard log nobody watches -- zero e-mail, not even an error notice.
+// This wraps a phase so a crash is at least reported the same way
+// individual source failures already are, and so one phase throwing
+// doesn't stop the caller from still running the others.
+async function runPhase(env, label, fn) {
+  try {
+    await fn(env);
+  } catch (err) {
+    console.error(`[aegis-samgov-bot] ${label} failed:`, err.stack || err.message);
+    if (env.RESEND_API_KEY) {
+      await notifyRobert(env, {
+        subject: `Opportunity bot — ${label} crashed`,
+        html: `<p><strong>${escHtml(label)}</strong> threw an uncaught error and did not finish. Anything downstream of this step in today's run (including a digest e-mail, if this was the scan) was not sent.</p><pre style="white-space:pre-wrap;font-size:12px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(err.stack || err.message)}</pre>`,
+      }).catch((notifyErr) =>
+        console.error(`[aegis-samgov-bot] Failed to send crash notice for ${label}:`, notifyErr.message),
+      );
+    }
+  }
+}
 
 // ── Main scan (SAM.gov + Adzuna — see file header re: USASpending) ────────
 
@@ -477,11 +500,20 @@ async function ingestAndNotify(env, allItems) {
 // ── Daily cron orchestration ─────────────────────────────────────────────
 
 async function runDailyJobs(env) {
+  // ensureReminderColumns/ensureOutcomeColumns are idempotent schema setup
+  // that every phase below depends on -- if these throw, nothing else this
+  // run can work either, so they're deliberately not isolated like the
+  // three phases below (a crash notice for these two would just say "schema
+  // migration failed," which is exactly what escapes to runPhase's own
+  // top-level catch if the whole function throws).
   await ensureReminderColumns(env);
   await ensureOutcomeColumns(env);
-  await runScan(env);
-  await sendFollowUpReminders(env);
-  await checkOutcomes(env);
+  // Isolated so a crash in one phase (e.g. the scan) doesn't also silently
+  // skip the others (e.g. follow-up reminders, which run every day
+  // regardless of whether today's scan succeeded).
+  await runPhase(env, "Daily scan", runScan);
+  await runPhase(env, "Follow-up reminders", sendFollowUpReminders);
+  await runPhase(env, "Outcome checks", checkOutcomes);
 }
 
 // ── Follow-up reminders ──────────────────────────────────────────────────
