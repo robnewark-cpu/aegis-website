@@ -1282,7 +1282,11 @@ function mapUsaSpendingResults(results) {
 // its own search since "attorney" isn't a compliance keyword.
 
 const ADZUNA_LEAD_KEYWORDS = ["fedramp", "cmmc compliance", "cybersecurity compliance", "information security officer"];
-const ADZUNA_LEGAL_LOCATIONS = ["Texas", "Oklahoma"];
+// Paused TX/OK per Robert -- he's still practicing law in both states and
+// wants to avoid Newark Firm outreach to firms he could professionally
+// encounter there. Expanded to neighboring states instead of narrowing to
+// nothing, so the pipeline keeps producing real leads.
+const ADZUNA_LEGAL_LOCATIONS = ["Kansas", "Missouri", "Arkansas", "New Mexico", "Colorado"];
 // Adzuna's "what" search is relevance-based, not a strict match -- a
 // what=attorney query returned "Medical Records Specialist" and "Sales
 // Executive" postings (confirmed by testing) purely because they were in
@@ -1371,7 +1375,8 @@ function mapAdzunaResult(r, source, forcedReason) {
 // registered e-mail as User-Agent, not just the API key (USAJOBS-specific).
 
 const USAJOBS_LEAD_KEYWORDS = ["fedramp", "cmmc", "cybersecurity compliance"];
-const USAJOBS_LEGAL_LOCATIONS = ["Texas", "Oklahoma"];
+// Same TX/OK pause as ADZUNA_LEGAL_LOCATIONS -- kept in sync.
+const USAJOBS_LEGAL_LOCATIONS = ["Kansas", "Missouri", "Arkansas", "New Mexico", "Colorado"];
 
 async function scanUsaJobs(env) {
   const items = [];
