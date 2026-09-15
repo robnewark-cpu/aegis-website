@@ -510,7 +510,7 @@ async function sendFollowUpReminders(env) {
   const threshold = Number(env.SCORE_THRESHOLD || "20");
   const { results } = await env.DB.prepare(
     `SELECT notice_id, title, agency, source, score, matched_reasons, respond_token,
-            sam_url, response_deadline, reminder_count, created_at
+            sam_url, response_deadline, reminder_count, created_at, business
      FROM opportunities
      WHERE status = 'new'
        AND score >= ?
@@ -532,6 +532,7 @@ async function sendFollowUpReminders(env) {
     title: row.title,
     agency: row.agency,
     source: row.source,
+    business: row.business,
     score: row.score,
     reasons: JSON.parse(row.matched_reasons || "[]"),
     url: row.sam_url,
@@ -1480,7 +1481,12 @@ function scoreItem(item) {
 
 // ── Approve / decline / save ────────────────────────────────────────────────
 
-const RESPOND_ACTIONS = ["approve", "decline", "save"];
+const RESPOND_ACTIONS = ["approve", "decline", "save", "approve_software"];
+// Which prospect-source leads get a second "pitch our software" button in
+// the digest, alongside the existing Newark Firm B2B / loan-servicing-
+// outsourcing pitch -- Robert's explicit choice: offer both, don't replace
+// either, so he can pick per lead (or approve both for a two-touch approach).
+const SOFTWARE_PITCH_BUSINESSES = ["newarkfirm", "loanservicing"];
 
 async function loadRespondRow(env, id, token) {
   const row = await env.DB
@@ -1509,7 +1515,11 @@ async function renderRespondConfirmation(env, url) {
   const row = await loadRespondRow(env, id, token);
   if (!row) return htmlResponse("Invalid or expired link.", 403);
 
-  const verb = action === "approve" ? "Approve" : action === "decline" ? "Decline" : "Save for later";
+  const verb =
+    action === "approve" ? "Approve" :
+    action === "decline" ? "Decline" :
+    action === "approve_software" ? "Approve & draft software pitch" :
+    "Save for later";
   return htmlResponse(
     `<h2 style="margin:0 0 12px">${verb}?</h2>
      <div style="border:1px solid #e0e0e0;border-radius:6px;padding:16px;margin-bottom:20px;color:#333">${escHtml(row.title)}</div>
@@ -1537,7 +1547,10 @@ async function handleRespond(env, request, ctx) {
   const row = await loadRespondRow(env, id, token);
   if (!row) return htmlResponse("Invalid or expired link.", 403);
 
-  const status = action === "approve" ? "approved" : action === "decline" ? "declined" : "saved";
+  const status =
+    action === "approve" || action === "approve_software" ? "approved" :
+    action === "decline" ? "declined" :
+    "saved";
   await env.DB.prepare("UPDATE opportunities SET status = ?, updated_at = datetime('now') WHERE notice_id = ?")
     .bind(status, id)
     .run();
@@ -1563,6 +1576,13 @@ async function handleRespond(env, request, ctx) {
       );
       extra = " Drafting an outreach e-mail now — check your e-mail in about a minute.";
     }
+  } else if (action === "approve_software" && env.ANTHROPIC_API_KEY) {
+    ctx.waitUntil(
+      draftSoftwarePitch(env, id, row).catch((err) =>
+        console.error("[aegis-samgov-bot] Software pitch draft failed:", err.message),
+      ),
+    );
+    extra = " Drafting a software pitch now — check your e-mail in about a minute.";
   }
 
   return htmlResponse(
@@ -1864,7 +1884,21 @@ async function draftOutreachEmail(env, id, row) {
       ? allOpportunities.map((r, i) => `--- Opportunity ${i + 1} of ${allOpportunities.length} ---\n${describeOpportunity(r)}`).join("\n\n")
       : describeOpportunity(row);
 
-  const draft = await callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business: row.business });
+  // These sources are literally "this company is currently hiring for a
+  // role we could instead perform for them" -- Robert's explicit ask was
+  // to make sure the drafted e-mail actually proposes that outsourcing
+  // angle, not just a generic capability mention. Legal-hiring-signal rows
+  // are excluded: Newark Firm's pitch is a B2B referral/overflow
+  // relationship with the firm, not "hire us instead of this attorney."
+  const isHiringSignal = ["adzuna", "adzuna_loanservicing", "usajobs"].includes(row.source);
+
+  const draft = await callAnthropicForOutreach(env, {
+    context,
+    isLegal,
+    isSubcontract,
+    isHiringSignal,
+    business: row.business,
+  });
   await sendOutreachDraftEmail(env, {
     row,
     id,
@@ -1946,19 +1980,22 @@ Respond with ONLY a raw JSON object, no markdown fences:
 // e-mail. Only Aegis has a real, grounded service+price list
 // (AEGIS_SERVICES_CONTEXT); the other three businesses speak in terms of
 // the general capability instead of inventing a service name or price.
-function buildGenericOutreachSystem(business) {
+function buildGenericOutreachSystem(business, isHiringSignal) {
   const identity = BUSINESS_IDENTITY[business] || BUSINESS_IDENTITY.aegis;
   const isAegis = !business || business === "aegis";
   const serviceBlock = isAegis
     ? `You may reference ONE of Aegis's real services from this list if it genuinely fits (do not invent a service or price not on this list):\n${AEGIS_SERVICES_CONTEXT}`
     : `${identity} has no published service catalog for this pitch -- speak only in terms of the general capability (e.g., "loan servicing support," "mediation services"), never a specific named product or price. Propose a conversation to discuss fit, not a quote.`;
+  const hiringSignalBlock = isHiringSignal
+    ? `\n\nCONTEXT FOR THE PITCH: this lead comes from a public job posting -- the recipient company is CURRENTLY HIRING for the role described below. The core of this pitch must explicitly propose ${identity}'s outsourced alternative to that hire -- e.g., engaging ${identity} for this function instead of, or alongside, making that hire -- grounded specifically in the role they posted, not a generic "we can help" message.`
+    : "";
 
   return `\
 You are drafting a SHORT, professional cold-outreach e-mail on behalf of ${identity}, for Robert (the owner) to review before sending.
 
 STRICT GROUNDING RULE: use only the facts given below about the recipient. Never invent details about their company, their internal operations, their needs, or their budget beyond what's stated. If you reference why ${identity} might help, tie it directly and specifically to the "why this matched" reasons given -- don't generalize into generic sales language.
 
-${serviceBlock}
+${serviceBlock}${hiringSignalBlock}
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it for this specific recipient, not a mail-merge template:
 - No standalone greeting like "Hello," or "Hi," on its own line -- either open with a formal salutation appropriate for an unnamed recipient ("Good afternoon," or "To the [Company] team,") or begin directly with the context sentence, no greeting at all.
@@ -1977,12 +2014,12 @@ Respond with ONLY a raw JSON object, no markdown fences:
 }`;
 }
 
-async function callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business }) {
+async function callAnthropicForOutreach(env, { context, isLegal, isSubcontract, isHiringSignal, business }) {
   const system = isSubcontract
     ? buildSubcontractOutreachSystem(business)
     : isLegal
     ? LEGAL_OUTREACH_SYSTEM
-    : buildGenericOutreachSystem(business);
+    : buildGenericOutreachSystem(business, isHiringSignal);
 
   const res = await fetch(ANTHROPIC_API, {
     method: "POST",
@@ -2071,6 +2108,146 @@ async function sendOutreachDraftEmail(env, { row, id, draft, isLegal, isSubcontr
   });
 }
 
+// ── Software pitch: LexFlow to law firms, LoanServ demo to lenders ─────────
+//
+// Robert's ask: alongside the existing Newark Firm B2B pitch / loan-
+// servicing-outsourcing pitch, also let him pitch the actual Aegis
+// software products to the same hiring-signal leads -- a law firm hiring
+// attorneys is also a plausible LexFlow buyer, a lender hiring servicing
+// staff is also a plausible LoanServ prospect. Offered as a SEPARATE
+// approve action (approve_software), never replacing the existing pitch,
+// per his explicit choice. Always sent from Aegis (both are Aegis/AegisOS
+// products), never Newark Firm.
+//
+// LexFlow has real published pricing (lexflow.html#pricing) to quote.
+// LoanServ does not -- fees.html is explicit that it "stays a demo"
+// because ACH is not live, so its pitch never quotes a price and only
+// proposes a demo.
+
+const LEXFLOW_PITCH_SYSTEM = `\
+You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LexFlow (a legal practice management software product on AegisOS) to a law firm, for Robert (the owner) to review before sending.
+
+STRICT GROUNDING RULE: use only the facts given below about the recipient firm (do not invent their practice area, case volume, or internal operations). Only cite these real, published LexFlow facts -- never invent a feature, price, or tier not listed here:
+- Features: client and matter management, automated conflict checking, trust/IOLTA three-way reconciliation, billing, client portal and secure messaging, document automation, e-signature.
+- Pricing: LexFlow Solo $39/mo, LexFlow Professional $99/mo, LexFlow Unlimited $179/mo, LexFlow Firm $199/seat/mo (for multi-attorney firms).
+- Not included: ACH origination, custody of client funds, FedRAMP or HIPAA certification.
+
+TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
+- No standalone greeting like "Hello," or "Hi," on its own line.
+- No contractions anywhere.
+- No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
+- Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
+- Cover, in whatever order feels natural: why you are writing (the firm's apparent hiring/growth signal, if given), a brief introduction of LexFlow and Aegis Global Holdings, ONE pricing tier that plausibly fits the firm's apparent size (a solo hire suggests Solo or Professional; a multi-attorney signal suggests Firm), and a single next step (see pricing at lexflow.html#pricing, or book a demo). No signature block.
+- 120-180 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME firm -- write ONE combined e-mail, not two pitches stitched together.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
+}`;
+
+const LOANSERV_PITCH_SYSTEM = `\
+You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, pitching LoanServ (a lending/loan-servicing operations software product on AegisOS) to a lender, for Robert (the owner) to review before sending.
+
+STRICT GROUNDING RULE: use only the facts given below about the recipient (do not invent their loan volume, portfolio, or internal operations). Only cite these real, published LoanServ facts -- never invent a feature or price:
+- Generally available for records, billing, a double-entry general ledger, and audit log.
+- ACH processing is NOT live yet -- never claim ACH, payment processing, or loan origination capability.
+- No published price list -- LoanServ is evaluated through a live demo, not a self-serve price. Never quote a number.
+
+TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it, not a template:
+- No standalone greeting like "Hello," or "Hi," on its own line.
+- No contractions anywhere.
+- No hype, no false familiarity, no stock AI-email openers ("I hope this finds you well," "I wanted to reach out").
+- Vary sentence length -- uniform sentence length is what makes an e-mail read as AI-generated.
+- Cover, in whatever order feels natural: why you are writing (the lender's apparent hiring/growth signal, if given), a brief introduction of LoanServ and Aegis Global Holdings, what it actually does (records, billing, ledger, audit log), and a single next step: book a demo (book-demo.html?module=LoanServ). No signature block.
+- 100-160 words.
+
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate signals about the SAME lender -- write ONE combined e-mail, not two pitches stitched together.
+
+Respond with ONLY a raw JSON object, no markdown fences:
+{
+  "subject": "short subject line",
+  "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
+}`;
+
+async function draftSoftwarePitch(env, id, row) {
+  if (!SOFTWARE_PITCH_BUSINESSES.includes(row.business)) {
+    throw new Error(`No software pitch defined for business "${row.business}"`);
+  }
+  const product = row.business === "newarkfirm" ? "LexFlow" : "LoanServ";
+  const system = row.business === "newarkfirm" ? LEXFLOW_PITCH_SYSTEM : LOANSERV_PITCH_SYSTEM;
+  const context = describeOpportunity(row);
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: {
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-5",
+      max_tokens: 4096,
+      system,
+      messages: [{ role: "user", content: context }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Anthropic ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const raw = data.content?.find((b) => b.type === "text")?.text ?? "";
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  let draft;
+  try {
+    draft = JSON.parse(cleaned);
+  } catch {
+    draft = { parseError: true, raw };
+  }
+
+  await sendSoftwarePitchDraftEmail(env, { row, id, draft, product });
+}
+
+async function sendSoftwarePitchDraftEmail(env, { row, id, draft, product }) {
+  const from = env.FROM_EMAIL || "noreply@aegisglobalholdings.com";
+  const to = env.TO_EMAIL || "info@aegisglobalholdings.com";
+
+  const draftHtml = draft.parseError
+    ? `<p style="color:#c0392b">AI output could not be parsed as JSON. Raw output below.</p>
+       <pre style="white-space:pre-wrap;font-size:13px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(draft.raw)}</pre>`
+    : `
+      <p><strong>Suggested subject:</strong> ${escHtml(draft.subject || "")}</p>
+      <div style="background:#f9f9f9;border:1px solid #ddd;padding:16px;white-space:pre-wrap;font-family:sans-serif">${escHtml(draft.body || "")}</div>`;
+
+  const contactBanner = row.contact_email
+    ? `<p style="background:#e8f8ee;border-left:3px solid #2e7d32;padding:12px 16px;font-size:13px">
+         📇 Contact found: <strong>${escHtml(row.contact_name || "")} ${row.contact_name ? "&lt;" : ""}${escHtml(row.contact_email)}${row.contact_name ? "&gt;" : ""}</strong> -- verify it's still current before sending.
+       </p>`
+    : "";
+
+  const sentUrl = `${WORKER_URL}/outcome?id=${encodeURIComponent(id)}&token=${row.respond_token}&action=sent`;
+
+  await sendViaResend(env.RESEND_API_KEY, {
+    from,
+    to: [to],
+    subject: `${product} pitch draft (AI, unsent) — ${row.title}`,
+    html: `<div style="font-family:sans-serif;max-width:640px">
+      <p style="background:#fff8e1;border-left:3px solid #FFB300;padding:12px 16px;font-size:13px">
+        ⚠ AI-drafted, NOT sent to anyone. This is the ${escHtml(product)} software pitch, separate from any other draft already sent for this lead -- verify the claims and recipient before using this.
+      </p>
+      ${contactBanner}
+      <h2>${escHtml(row.title)}</h2>
+      ${row.sam_url ? `<p><a href="${escHtml(row.sam_url)}">Source link</a></p>` : ""}
+      ${draftHtml}
+      <p style="margin-top:20px"><a href="${sentUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">I sent this — start tracking</a></p>
+    </div>`,
+    text: `${product} pitch draft for: ${row.title}\n(NOT sent -- verify recipient before using this.)\n${row.contact_email ? `\nContact found: ${row.contact_name || ""} <${row.contact_email}>\n` : ""}\n${JSON.stringify(draft, null, 2)}\n\n${row.sam_url || ""}\n\nI sent this: ${sentUrl}`,
+  });
+}
+
 // ── E-mail ──────────────────────────────────────────────────────────────────
 
 async function sendDigestEmail(env, items) {
@@ -2084,6 +2261,9 @@ async function sendDigestEmail(env, items) {
       const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve`;
       const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=decline`;
       const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=save`;
+      const softwareUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_software`;
+      const softwareProduct = item.business === "newarkfirm" ? "LexFlow" : item.business === "loanservicing" ? "LoanServ" : null;
+      const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2130,6 +2310,7 @@ async function sendDigestEmail(env, items) {
           </p>
           <div style="margin-top:12px">
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
+            ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
@@ -2151,7 +2332,12 @@ async function sendDigestEmail(env, items) {
         const summaryLines = item.aiSummary
           ? `\nWhat's being asked for: ${item.aiSummary.summary || ""}${item.aiSummary.relevantServices?.length ? `\nCould offer: ${item.aiSummary.relevantServices.join(", ")}` : ""}\nAlways worth offering: free AI Visibility Scan (https://aegisglobalholdings.com/ai-visibility-check.html)`
           : "";
-        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
+        const softwareProduct = item.business === "newarkfirm" ? "LexFlow" : item.business === "loanservicing" ? "LoanServ" : null;
+        const softwareLine =
+          softwareProduct && PROSPECT_SOURCES.includes(item.source)
+            ? `\nPitch ${softwareProduct}: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve_software`
+            : "";
+        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve${softwareLine}\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
       })
       .join("\n\n"),
   });
@@ -2171,6 +2357,9 @@ async function sendReminderDigestEmail(env, items) {
       const approveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve`;
       const declineUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=decline`;
       const saveUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=save`;
+      const softwareUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_software`;
+      const softwareProduct = item.business === "newarkfirm" ? "LexFlow" : item.business === "loanservicing" ? "LoanServ" : null;
+      const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2194,6 +2383,7 @@ async function sendReminderDigestEmail(env, items) {
           </p>
           <div style="margin-top:12px">
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
+            ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
