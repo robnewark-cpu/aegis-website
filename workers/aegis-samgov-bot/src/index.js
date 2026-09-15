@@ -233,7 +233,7 @@ const OUTCOME_ACTIONS_NEEDING_DATE = ["schedule_meeting", "meeting_reschedule"];
 // Sources where approving triggers an outreach draft (Phase 2B) rather than
 // a requirements checklist (sam_gov, Phase 2A). Used both to route Approve
 // and to decide which rows participate in same-company-same-day dedup.
-const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "usajobs", "usajobs_legal", "subnet"];
+const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "adzuna_loanservicing", "usajobs", "usajobs_legal", "subnet"];
 
 // Short, factual identity lines for the SubNet subcontracting-outreach
 // prompt -- these are the only claims the model is allowed to make about
@@ -1289,6 +1289,12 @@ const ADZUNA_LEGAL_LOCATIONS = ["Texas", "Oklahoma"];
 // the same location bucket. Require the role itself to actually be legal.
 const LEGAL_TITLE_PATTERN = /\battorney\b|\bcounsel\b|\besq\.?\b/i;
 
+// A company hiring loan-servicing staff in TX/OK is a plausible Veteran
+// Loan Servicing outsourcing prospect -- same pattern as the legal search
+// above, scoped to the same two states per Robert's explicit go-ahead.
+const ADZUNA_LOANSERVICING_LOCATIONS = ["Texas", "Oklahoma"];
+const LOANSERVICING_TITLE_PATTERN = /\bloan servicing\b|\bmortgage servicing\b|\bservicing specialist\b|\bdefault servicing\b|\bloss mitigation\b/i;
+
 async function scanAdzuna(env) {
   const items = [];
 
@@ -1302,6 +1308,14 @@ async function scanAdzuna(env) {
     for (const r of results) {
       if (!LEGAL_TITLE_PATTERN.test(r.title || "")) continue;
       items.push(mapAdzunaResult(r, "adzuna_legal", `Legal Hiring Signal (${location})`));
+    }
+  }
+
+  for (const location of ADZUNA_LOANSERVICING_LOCATIONS) {
+    const results = await fetchAdzuna(env, { what: "loan servicing", where: location, max_days_old: 2, results_per_page: 20 });
+    for (const r of results) {
+      if (!LOANSERVICING_TITLE_PATTERN.test(r.title || "")) continue;
+      items.push(mapAdzunaResult(r, "adzuna_loanservicing", `Loan Servicing Hiring Signal (${location})`));
     }
   }
 
@@ -1329,6 +1343,11 @@ function mapAdzunaResult(r, source, forcedReason) {
   return {
     id: `adzuna_${r.id}`,
     source,
+    // Legal-hiring-signal rows are Newark Firm prospects, not Aegis
+    // ones -- previously left untagged (defaulted to "aegis" at insert
+    // time), which mislabeled them in the digest even though outreach
+    // drafting already correctly used the Newark Firm framing by source.
+    business: source === "adzuna_legal" ? "newarkfirm" : source === "adzuna_loanservicing" ? "loanservicing" : "aegis",
     title: `${company} — ${r.title || "(untitled posting)"}`,
     agency: r.location?.display_name || null,
     noticeType: "Job Posting (hiring signal, not open for bid)",
@@ -1401,6 +1420,8 @@ function mapUsaJobsResult(r, source, forcedReason) {
   return {
     id: `usajobs_${r.MatchedObjectId}`,
     source,
+    // Same Newark Firm tagging fix as mapAdzunaResult.
+    business: source === "usajobs_legal" ? "newarkfirm" : "aegis",
     title: `${d.DepartmentName || "Federal agency"} — ${d.PositionTitle || "(untitled posting)"}`,
     agency: d.PositionLocationDisplay || d.OrganizationName || null,
     noticeType: "Federal Job Posting (hiring signal, not open for bid)",
@@ -1911,34 +1932,52 @@ Respond with ONLY a raw JSON object, no markdown fences:
 }`;
 }
 
-async function callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business }) {
-  const system = isSubcontract
-    ? buildSubcontractOutreachSystem(business)
-    : isLegal
-    ? LEGAL_OUTREACH_SYSTEM
-    : `\
-You are drafting a SHORT, professional cold-outreach e-mail on behalf of Aegis Global Holdings, a veteran-owned technology/compliance consulting company, for Robert (the owner) to review before sending.
+// The generic (non-legal, non-subcontract) outreach pitch, parameterized by
+// business identity. Previously hardcoded to Aegis Global Holdings
+// regardless of which business a lead was actually scored for -- harmless
+// while only Aegis ever populated these prospect sources, but a real bug
+// once USASpending/Adzuna started tagging loanservicing/modmediations
+// leads too: a loan-servicing prospect would have been pitched an "Aegis"
+// e-mail. Only Aegis has a real, grounded service+price list
+// (AEGIS_SERVICES_CONTEXT); the other three businesses speak in terms of
+// the general capability instead of inventing a service name or price.
+function buildGenericOutreachSystem(business) {
+  const identity = BUSINESS_IDENTITY[business] || BUSINESS_IDENTITY.aegis;
+  const isAegis = !business || business === "aegis";
+  const serviceBlock = isAegis
+    ? `You may reference ONE of Aegis's real services from this list if it genuinely fits (do not invent a service or price not on this list):\n${AEGIS_SERVICES_CONTEXT}`
+    : `${identity} has no published service catalog for this pitch -- speak only in terms of the general capability (e.g., "loan servicing support," "mediation services"), never a specific named product or price. Propose a conversation to discuss fit, not a quote.`;
 
-STRICT GROUNDING RULE: use only the facts given below about the recipient. Never invent details about their company, their internal operations, their needs, or their budget beyond what's stated. If you reference why Aegis might help, tie it directly and specifically to the "why this matched" reasons given -- don't generalize into generic sales language.
+  return `\
+You are drafting a SHORT, professional cold-outreach e-mail on behalf of ${identity}, for Robert (the owner) to review before sending.
 
-You may reference ONE of Aegis's real services from this list if it genuinely fits (do not invent a service or price not on this list):
-${AEGIS_SERVICES_CONTEXT}
+STRICT GROUNDING RULE: use only the facts given below about the recipient. Never invent details about their company, their internal operations, their needs, or their budget beyond what's stated. If you reference why ${identity} might help, tie it directly and specifically to the "why this matched" reasons given -- don't generalize into generic sales language.
+
+${serviceBlock}
 
 TONE AND STYLE -- formal business-development correspondence that reads like a specific person wrote it for this specific recipient, not a mail-merge template:
 - No standalone greeting like "Hello," or "Hi," on its own line -- either open with a formal salutation appropriate for an unnamed recipient ("Good afternoon," or "To the [Company] team,") or begin directly with the context sentence, no greeting at all.
 - No contractions anywhere (write "that is" not "that's", "we do not" not "we don't", "I am" not "I'm").
 - No hype, no false familiarity ("I noticed your company is doing great things!"), no filler transitions ("So," "Also," "Just wanted to..." to open a sentence), and no stock AI-email openers ("I hope this finds you well," "I wanted to reach out regarding," "I came across your posting").
 - Precise, declarative sentences, but vary their length and rhythm -- a run of same-length sentences is what makes an e-mail read as AI-generated, not a person. Assume the recipient is a senior decision-maker with little time.
-- Cover, in whatever order and sentence count feels natural for this specific opportunity, not a rigid formula: why you are writing, a brief introduction of Aegis Global Holdings, the specific service and price, and a single low-pressure next step. No signature block, no closing pleasantry that sounds boilerplate.
+- Cover, in whatever order and sentence count feels natural for this specific opportunity, not a rigid formula: why you are writing, a brief introduction of ${identity}, the relevant capability${isAegis ? " and price" : ""}, and a single low-pressure next step. No signature block, no closing pleasantry that sounds boilerplate.
 - 120-180 words.
 
-MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME company -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together. Still recommend only ONE Aegis service overall unless two are both clearly and separately justified. Never claim more signals exist than are actually listed.
+MULTIPLE OPPORTUNITIES: if the context below lists more than one "--- Opportunity N of M ---" block, they are separate public signals about the SAME company -- write ONE combined e-mail that naturally references the most relevant point(s), not two pitches stitched together.${isAegis ? " Still recommend only ONE Aegis service overall unless two are both clearly and separately justified." : ""} Never claim more signals exist than are actually listed.
 
 Respond with ONLY a raw JSON object, no markdown fences:
 {
   "subject": "short subject line",
   "body": "the e-mail body, plain text, no signature block (Robert will add his own)"
 }`;
+}
+
+async function callAnthropicForOutreach(env, { context, isLegal, isSubcontract, business }) {
+  const system = isSubcontract
+    ? buildSubcontractOutreachSystem(business)
+    : isLegal
+    ? LEGAL_OUTREACH_SYSTEM
+    : buildGenericOutreachSystem(business);
 
   const res = await fetch(ANTHROPIC_API, {
     method: "POST",
@@ -2044,6 +2083,7 @@ async function sendDigestEmail(env, items) {
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
         item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "adzuna_loanservicing" ? "LOAN SERVICING HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
         item.source === "subnet" ? "SUBCONTRACTING OPPORTUNITY — PROSPECT" :
@@ -2130,6 +2170,7 @@ async function sendReminderDigestEmail(env, items) {
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
         item.source === "adzuna_legal" ? "LEGAL HIRING SIGNAL — PROSPECT" :
+        item.source === "adzuna_loanservicing" ? "LOAN SERVICING HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs" ? "FEDERAL HIRING SIGNAL — PROSPECT" :
         item.source === "usajobs_legal" ? "FEDERAL LEGAL HIRING SIGNAL — PROSPECT" :
         item.source === "subnet" ? "SUBCONTRACTING OPPORTUNITY — PROSPECT" :
