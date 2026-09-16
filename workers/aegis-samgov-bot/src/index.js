@@ -233,7 +233,7 @@ const OUTCOME_ACTIONS_NEEDING_DATE = ["schedule_meeting", "meeting_reschedule"];
 // Sources where approving triggers an outreach draft (Phase 2B) rather than
 // a requirements checklist (sam_gov, Phase 2A). Used both to route Approve
 // and to decide which rows participate in same-company-same-day dedup.
-const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "adzuna_loanservicing", "usajobs", "usajobs_legal", "subnet"];
+const PROSPECT_SOURCES = ["usaspending", "adzuna", "adzuna_legal", "adzuna_loanservicing", "usajobs", "usajobs_legal", "subnet", "hmda_lender"];
 
 // Short, factual identity lines for the SubNet subcontracting-outreach
 // prompt -- these are the only claims the model is allowed to make about
@@ -346,6 +346,12 @@ export default {
     // workflow (SubNet 403s every Workers request — see handleIngestSubnet).
     if (request.method === "POST" && url.pathname === "/ingest-subnet") {
       return handleIngestSubnet(request, env);
+    }
+
+    // Receives HMDA lender results fetched by the GitHub Actions workflow
+    // (see handleIngestHmdaLenders's file-header comment).
+    if (request.method === "POST" && url.pathname === "/ingest-hmda-lenders") {
+      return handleIngestHmdaLenders(request, env);
     }
 
     return jsonResponse({ error: "Not found" }, 404);
@@ -497,16 +503,21 @@ async function ingestAndNotify(env, allItems) {
   if (newQualifying.length > 0 && env.RESEND_API_KEY) {
     // Only qualifying items get an AI summary -- these already passed the
     // score threshold, so the volume is small and bounded, unlike scoring
-    // every item seen.
+    // every item seen. hmda_lender is excluded: it's a curated directory
+    // entry with no real description to summarize (just "active lender, N
+    // loans"), and its first ingest can be a few hundred items at once --
+    // running that many sequential Anthropic calls for no real benefit
+    // isn't worth the time/cost.
     if (env.ANTHROPIC_API_KEY) {
       for (const item of newQualifying) {
+        if (item.source === "hmda_lender") continue;
         item.aiSummary = await summarizeForDigest(env, item).catch((err) => {
           console.error("[aegis-samgov-bot] Digest summary failed:", err.message);
           return null;
         });
       }
     }
-    await sendDigestEmail(env, newQualifying);
+    await sendDigestEmailBatched(env, newQualifying);
   }
 
   return { totalSeen, totalNew, qualifying: newQualifying.length };
@@ -677,14 +688,20 @@ async function sendCatchupDigest(env) {
     business: row.business,
   }));
 
-  // A big catch-up batch as one e-mail risks Gmail's ~102KB clipping
-  // threshold, which would silently hide the Approve/Decline links below
-  // the fold -- split into pages instead.
-  const CATCHUP_BATCH_SIZE = 25;
-  for (let i = 0; i < items.length; i += CATCHUP_BATCH_SIZE) {
-    await sendDigestEmail(env, items.slice(i, i + CATCHUP_BATCH_SIZE));
-  }
+  await sendDigestEmailBatched(env, items);
   return { sent: items.length };
+}
+
+// A big batch as one e-mail risks Gmail's ~102KB clipping threshold, which
+// would silently hide the Approve/Decline links below the fold -- split
+// into pages. Used by both a normal scan (usually small, but the first
+// ingest of a new bulk source like HMDA lenders can be large) and the
+// catch-up digest (recovering a whole backlog at once).
+const DIGEST_BATCH_SIZE = 25;
+async function sendDigestEmailBatched(env, items) {
+  for (let i = 0; i < items.length; i += DIGEST_BATCH_SIZE) {
+    await sendDigestEmail(env, items.slice(i, i + DIGEST_BATCH_SIZE));
+  }
 }
 
 // Finds approved leads due for a status check-in (never asked, or asked
@@ -1247,6 +1264,69 @@ function mapSubnetResults(results) {
     }));
 }
 
+// ── HMDA lender ingest endpoint (called by GitHub Actions) ─────────────────
+//
+// Robert's ask: unlike every other loan-servicing lead so far (a job
+// posting or a federal solicitation), this is a direct prospect list --
+// real mortgage lenders active in OK/TX, sourced from the CFPB's public
+// HMDA (Home Mortgage Disclosure Act) filers API, for pitching either the
+// LoanServ demo (approve_software) or Veteran Loan Servicing's outsourced
+// servicing itself (the regular Approve pitch -- buildGenericOutreachSystem
+// already handles a non-hiring-signal loanservicing pitch correctly, since
+// isHiringSignal is only true for adzuna/adzuna_loanservicing/usajobs).
+//
+// ffiec.cfpb.gov answered fine from this Worker's own test environment, but
+// per this file's established pattern for every other bulk external source
+// (USASpending 525s, SubNet 403s, both from Cloudflare's edge specifically),
+// a GitHub Actions relay is used here too rather than assuming Workers can
+// reach it in production -- hmda-lenders-scan.yml does the fetch/filter and
+// POSTs the result here.
+
+async function handleIngestHmdaLenders(request, env) {
+  if (!env.INGEST_SECRET) {
+    return jsonResponse({ error: "INGEST_SECRET not configured" }, 500);
+  }
+  if (request.headers.get("X-Ingest-Secret") !== env.INGEST_SECRET) {
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const rawResults = Array.isArray(body.results) ? body.results : [];
+  const items = mapHmdaLenderResults(rawResults);
+  const result = await ingestAndNotify(env, items);
+  return jsonResponse(result);
+}
+
+function mapHmdaLenderResults(results) {
+  return results
+    .filter((r) => r.lei && r.name && r.state && r.year)
+    .map((r) => ({
+      id: `hmda_${r.lei}_${r.year}`,
+      source: "hmda_lender",
+      business: "loanservicing",
+      title: `${r.name} — Active Mortgage Lender (${r.state})`,
+      agency: r.state,
+      noticeType: "HMDA-Reporting Lender (prospect, not a solicitation)",
+      naicsCode: null,
+      setAside: null,
+      postedDate: null,
+      responseDeadline: null,
+      // No per-lender source page exists (this is a directory entry, not a
+      // posting) -- a name search is the closest thing to a useful link, so
+      // Robert can find their site/contact instead of a broken href.
+      url: `https://www.google.com/search?q=${encodeURIComponent(`${r.name} NMLS mortgage lender ${r.state}`)}`,
+      description: `Reported ${r.count} HMDA loan${r.count === 1 ? "" : "s"} in ${r.state} for ${r.year} -- an active mortgage lender/originator, not necessarily doing its own servicing in-house.`,
+      awardAmount: null,
+      forcedReason: `Active HMDA-Reporting Lender in ${r.state} (${r.count} loans, ${r.year})`,
+    }));
+}
+
 // ── Source 1: SAM.gov open solicitations ────────────────────────────────────
 
 async function scanSamGov(env) {
@@ -1601,7 +1681,7 @@ function scoreItem(item) {
 
 // ── Approve / decline / save ────────────────────────────────────────────────
 
-const RESPOND_ACTIONS = ["approve", "decline", "save", "approve_software", "approve_counselai"];
+const RESPOND_ACTIONS = ["approve", "decline", "save", "approve_software", "approve_counselai", "approve_both_software"];
 // Which prospect-source leads get a second "pitch our software" button in
 // the digest, alongside the existing Newark Firm B2B / loan-servicing-
 // outsourcing pitch -- Robert's explicit choice: offer both, don't replace
@@ -1646,6 +1726,7 @@ async function renderRespondConfirmation(env, url) {
     action === "decline" ? "Decline" :
     action === "approve_software" ? "Approve & draft software pitch" :
     action === "approve_counselai" ? "Approve & draft CounselAI pitch" :
+    action === "approve_both_software" ? "Approve & draft LexFlow + CounselAI pitches" :
     "Save for later";
   return htmlResponse(
     `<h2 style="margin:0 0 12px">${verb}?</h2>
@@ -1675,9 +1756,11 @@ async function handleRespond(env, request, ctx) {
   if (!row) return htmlResponse("Invalid or expired link.", 403);
 
   const status =
-    action === "approve" || action === "approve_software" || action === "approve_counselai" ? "approved" :
-    action === "decline" ? "declined" :
-    "saved";
+    action === "approve" || action === "approve_software" || action === "approve_counselai" || action === "approve_both_software"
+      ? "approved"
+      : action === "decline"
+      ? "declined"
+      : "saved";
   await env.DB.prepare("UPDATE opportunities SET status = ?, updated_at = datetime('now') WHERE notice_id = ?")
     .bind(status, id)
     .run();
@@ -1717,6 +1800,21 @@ async function handleRespond(env, request, ctx) {
       ),
     );
     extra = " Drafting a CounselAI pitch now — check your e-mail in about a minute.";
+  } else if (action === "approve_both_software" && env.ANTHROPIC_API_KEY) {
+    // Two independent drafts, not one merged e-mail -- LexFlow and CounselAI
+    // are different pitches with different grounding rules, and Robert may
+    // only end up sending one of the two.
+    ctx.waitUntil(
+      Promise.all([
+        draftSoftwarePitch(env, id, row, { product: "LexFlow" }).catch((err) =>
+          console.error("[aegis-samgov-bot] LexFlow pitch draft failed:", err.message),
+        ),
+        draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch((err) =>
+          console.error("[aegis-samgov-bot] CounselAI pitch draft failed:", err.message),
+        ),
+      ]),
+    );
+    extra = " Drafting LexFlow and CounselAI pitches now — check your e-mail in about a minute.";
   }
 
   return htmlResponse(
@@ -2441,6 +2539,8 @@ async function sendDigestEmail(env, items) {
       const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
       const counselaiUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_counselai`;
       const showCounselaiButton = COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source);
+      const bothUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_both_software`;
+      const showBothButton = showSoftwareButton && showCounselaiButton;
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2480,7 +2580,9 @@ async function sendDigestEmail(env, items) {
           <p style="margin:8px 0;font-size:14px">
             <a href="${escHtml(item.url)}">View ${
               item.source === "usaspending" ? "on USASpending.gov" :
+              item.source === "hmda_lender" ? "lender search" :
               item.source.startsWith("adzuna") || item.source.startsWith("usajobs") ? "job posting" :
+              item.source === "subnet" ? "on SBA SubNet" :
               "on SAM.gov"
             }</a>
             ${item.responseDeadline ? ` · Response due: ${escHtml(item.responseDeadline)}` : ""}
@@ -2489,6 +2591,7 @@ async function sendDigestEmail(env, items) {
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
             ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
             ${showCounselaiButton ? `<a href="${counselaiUrl}" style="background:#5e35b1;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch CounselAI</a>` : ""}
+            ${showBothButton ? `<a href="${bothUrl}" style="background:#37474f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch Both</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
@@ -2519,7 +2622,11 @@ async function sendDigestEmail(env, items) {
           COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source)
             ? `\nPitch CounselAI: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve_counselai`
             : "";
-        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve${softwareLine}${counselaiLine}\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
+        const bothLine =
+          softwareLine && counselaiLine
+            ? `\nPitch Both: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve_both_software`
+            : "";
+        return `[${item.score}/100] ${item.source === "usaspending" ? "AWARDED — " : ""}${item.title}\nWhy: ${item.reasons.join(", ")}${summaryLines}\n${item.url}\nApprove: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=approve${softwareLine}${counselaiLine}${bothLine}\nDecline: ${WORKER_URL}/respond?id=${item.id}&token=${item.token}&action=decline`;
       })
       .join("\n\n"),
   });
@@ -2544,6 +2651,8 @@ async function sendReminderDigestEmail(env, items) {
       const showSoftwareButton = softwareProduct && PROSPECT_SOURCES.includes(item.source);
       const counselaiUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_counselai`;
       const showCounselaiButton = COUNSELAI_PITCH_BUSINESSES.includes(item.business) && PROSPECT_SOURCES.includes(item.source);
+      const bothUrl = `${WORKER_URL}/respond?id=${encodeURIComponent(item.id)}&token=${item.token}&action=approve_both_software`;
+      const showBothButton = showSoftwareButton && showCounselaiButton;
       const sourceLabel =
         item.source === "usaspending" ? "AWARDED CONTRACT — PROSPECT" :
         item.source === "adzuna" ? "HIRING SIGNAL — PROSPECT" :
@@ -2569,6 +2678,7 @@ async function sendReminderDigestEmail(env, items) {
             <a href="${approveUrl}" style="background:#0E141B;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Approve</a>
             ${showSoftwareButton ? `<a href="${softwareUrl}" style="background:#00838f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch ${softwareProduct}</a>` : ""}
             ${showCounselaiButton ? `<a href="${counselaiUrl}" style="background:#5e35b1;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch CounselAI</a>` : ""}
+            ${showBothButton ? `<a href="${bothUrl}" style="background:#37474f;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Pitch Both</a>` : ""}
             <a href="${declineUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px;margin-right:8px">Decline</a>
             <a href="${saveUrl}" style="background:#f0f0f0;color:#333;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">Save for later</a>
           </div>
