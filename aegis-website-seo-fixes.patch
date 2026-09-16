@@ -1,0 +1,124 @@
+diff --git a/aegis-founding-rate.html b/aegis-founding-rate.html
+index 4ec879e..b616ee0 100644
+--- a/aegis-founding-rate.html
++++ b/aegis-founding-rate.html
+@@ -4,6 +4,7 @@
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Aegis — Founding Rate, 48 Hours Only</title>
++<meta name="robots" content="noindex, follow">
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+ <style>
+diff --git a/aegisos-early-access.html b/aegisos-early-access.html
+index ab60531..b8b7a06 100644
+--- a/aegisos-early-access.html
++++ b/aegisos-early-access.html
+@@ -4,6 +4,7 @@
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>AegisOS — Legal + Lending Case Management. Own It Forever.</title>
++<meta name="robots" content="noindex, follow">
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+ <style>
+diff --git a/ai-visibility-check.html b/ai-visibility-check.html
+index ccd02aa..5337a68 100644
+--- a/ai-visibility-check.html
++++ b/ai-visibility-check.html
+@@ -15,6 +15,20 @@
+   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+   <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
+   <script src="analytics.js" defer></script>
++<script type="application/ld+json">
++{
++  "@context": "https://schema.org",
++  "@type": "Service",
++  "name": "Free AI Visibility Scan",
++  "description": "Request a free scan of how your business shows up in AI assistant answers, from Aegis Global Holdings.",
++  "url": "https://aegisglobalholdings.com/ai-visibility-check.html",
++  "provider": {
++    "@type": "Organization",
++    "name": "Aegis Global Holdings",
++    "url": "https://aegisglobalholdings.com/"
++  }
++}
++</script>
+ </head>
+ <body>
+   <header class="site-header">
+diff --git a/book-demo.html b/book-demo.html
+index fb26c91..762e150 100644
+--- a/book-demo.html
++++ b/book-demo.html
+@@ -15,6 +15,20 @@
+   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+   <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
+   <script src="analytics.js" defer></script>
++<script type="application/ld+json">
++{
++  "@context": "https://schema.org",
++  "@type": "Service",
++  "name": "AegisOS Demo Booking",
++  "description": "Book a demo of AegisOS and its vertical modules for legal, lending, healthcare, finance, and field service teams.",
++  "url": "https://aegisglobalholdings.com/book-demo.html",
++  "provider": {
++    "@type": "Organization",
++    "name": "Aegis Global Holdings",
++    "url": "https://aegisglobalholdings.com/"
++  }
++}
++</script>
+ </head>
+ <body>
+   <header class="site-header">
+diff --git a/founder-program.html b/founder-program.html
+index b25779f..2dbeb3d 100644
+--- a/founder-program.html
++++ b/founder-program.html
+@@ -15,6 +15,20 @@
+   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+   <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
+   <script src="analytics.js" defer></script>
++<script type="application/ld+json">
++{
++  "@context": "https://schema.org",
++  "@type": "Service",
++  "name": "AegisOS Design Partner Program",
++  "description": "Join the AegisOS Design Partner Program for direct roadmap input, hands-on onboarding, and preferred pricing.",
++  "url": "https://aegisglobalholdings.com/founder-program.html",
++  "provider": {
++    "@type": "Organization",
++    "name": "Aegis Global Holdings",
++    "url": "https://aegisglobalholdings.com/"
++  }
++}
++</script>
+ </head>
+ <body>
+   <header class="site-header">
+diff --git a/security.html b/security.html
+index 4e9727e..72209d1 100644
+--- a/security.html
++++ b/security.html
+@@ -15,6 +15,20 @@
+   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+   <link rel="alternate" type="text/plain" href="https://aegisglobalholdings.com/llms.txt" title="LLM information">
+   <script src="analytics.js" defer></script>
++<script type="application/ld+json">
++{
++  "@context": "https://schema.org",
++  "@type": "Service",
++  "name": "Aegis Security & Compliance",
++  "description": "AegisOS security and compliance approach: access control, data isolation, and audit logging.",
++  "url": "https://aegisglobalholdings.com/security.html",
++  "provider": {
++    "@type": "Organization",
++    "name": "Aegis Global Holdings",
++    "url": "https://aegisglobalholdings.com/"
++  }
++}
++</script>
+ </head>
+ <body>
+   <header class="site-header">
