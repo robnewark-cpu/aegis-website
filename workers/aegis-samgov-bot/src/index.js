@@ -389,6 +389,24 @@ async function runPhase(env, label, fn) {
   }
 }
 
+// A click-triggered draft (Approve, Pitch LexFlow, etc.) runs in the
+// background via ctx.waitUntil and only ever had a bare console.error on
+// failure -- Robert clicks a button, is told to check his e-mail "in about
+// a minute," and if the draft fails (same class of Resend/Anthropic error
+// runPhase now catches for the daily cron) he'd wait forever with no way
+// to know it isn't coming. Returns a .catch() callback that logs AND
+// notifies, same as runPhase, for these one-off background drafts.
+function notifyDraftFailure(env, label) {
+  return (err) => {
+    console.error(`[aegis-samgov-bot] ${label} failed:`, err.stack || err.message);
+    if (!env.RESEND_API_KEY) return;
+    return notifyRobert(env, {
+      subject: `Opportunity bot — ${label} failed`,
+      html: `<p><strong>${escHtml(label)}</strong> failed -- no draft e-mail was sent for this lead.</p><pre style="white-space:pre-wrap;font-size:12px;background:#f9f9f9;padding:12px;border:1px solid #ddd">${escHtml(err.stack || err.message)}</pre>`,
+    }).catch(() => {});
+  };
+}
+
 // ── Main scan (SAM.gov + Adzuna — see file header re: USASpending) ────────
 
 async function runScan(env) {
@@ -873,9 +891,7 @@ async function handleOutcome(env, request, ctx) {
       .run();
     if (env.ANTHROPIC_API_KEY) {
       ctx.waitUntil(
-        draftMeetingFollowup(env, row).catch((err) =>
-          console.error("[aegis-samgov-bot] Meeting follow-up draft failed:", err.message),
-        ),
+        draftMeetingFollowup(env, row).catch(notifyDraftFailure(env, "Meeting follow-up draft")),
       );
       extra = " Drafting a follow-up e-mail now — check your e-mail in about a minute.";
     }
@@ -1044,7 +1060,7 @@ async function sendOutcomeAskDigest(env, items) {
     })
     .join("");
 
-  const res = await sendViaResend(env.RESEND_API_KEY, {
+  await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     subject: `How did it go? ${items.length} approved lead${items.length === 1 ? "" : "s"} to update`,
@@ -1060,11 +1076,6 @@ async function sendOutcomeAskDigest(env, items) {
       )
       .join("\n\n"),
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error(`[aegis-samgov-bot] Outcome-ask e-mail failed ${res.status}:`, body);
-  }
 }
 
 async function sendMeetingCheckDigest(env, items) {
@@ -1088,7 +1099,7 @@ async function sendMeetingCheckDigest(env, items) {
     })
     .join("");
 
-  const res = await sendViaResend(env.RESEND_API_KEY, {
+  await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     subject: `Did it happen? ${items.length} meeting${items.length === 1 ? "" : "s"} to confirm`,
@@ -1103,10 +1114,7 @@ async function sendMeetingCheckDigest(env, items) {
       )
       .join("\n\n"),
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error(`[aegis-samgov-bot] Meeting-check e-mail failed ${res.status}:`, body);
+}
   }
 }
 
@@ -1769,9 +1777,7 @@ async function handleRespond(env, request, ctx) {
   if (action === "approve" && env.ANTHROPIC_API_KEY) {
     if (row.source === "sam_gov") {
       ctx.waitUntil(
-        draftSamGovChecklist(env, id, row.title).catch((err) =>
-          console.error("[aegis-samgov-bot] Checklist draft failed:", err.message),
-        ),
+        draftSamGovChecklist(env, id, row.title).catch(notifyDraftFailure(env, "Checklist draft")),
       );
       extra = " Drafting a requirements checklist now — check your e-mail in about a minute.";
     } else if (PROSPECT_SOURCES.includes(row.source)) {
@@ -1780,24 +1786,18 @@ async function handleRespond(env, request, ctx) {
       // e-mail instead of sending two separate pitches to the same company
       // on the same day.
       ctx.waitUntil(
-        draftOutreachEmail(env, id, row).catch((err) =>
-          console.error("[aegis-samgov-bot] Outreach draft failed:", err.message),
-        ),
+        draftOutreachEmail(env, id, row).catch(notifyDraftFailure(env, "Outreach draft")),
       );
       extra = " Drafting an outreach e-mail now — check your e-mail in about a minute.";
     }
   } else if (action === "approve_software" && env.ANTHROPIC_API_KEY) {
     ctx.waitUntil(
-      draftSoftwarePitch(env, id, row).catch((err) =>
-        console.error("[aegis-samgov-bot] Software pitch draft failed:", err.message),
-      ),
+      draftSoftwarePitch(env, id, row).catch(notifyDraftFailure(env, "Software pitch draft")),
     );
     extra = " Drafting a software pitch now — check your e-mail in about a minute.";
   } else if (action === "approve_counselai" && env.ANTHROPIC_API_KEY) {
     ctx.waitUntil(
-      draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch((err) =>
-        console.error("[aegis-samgov-bot] CounselAI pitch draft failed:", err.message),
-      ),
+      draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch(notifyDraftFailure(env, "CounselAI pitch draft")),
     );
     extra = " Drafting a CounselAI pitch now — check your e-mail in about a minute.";
   } else if (action === "approve_both_software" && env.ANTHROPIC_API_KEY) {
@@ -1806,12 +1806,8 @@ async function handleRespond(env, request, ctx) {
     // only end up sending one of the two.
     ctx.waitUntil(
       Promise.all([
-        draftSoftwarePitch(env, id, row, { product: "LexFlow" }).catch((err) =>
-          console.error("[aegis-samgov-bot] LexFlow pitch draft failed:", err.message),
-        ),
-        draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch((err) =>
-          console.error("[aegis-samgov-bot] CounselAI pitch draft failed:", err.message),
-        ),
+        draftSoftwarePitch(env, id, row, { product: "LexFlow" }).catch(notifyDraftFailure(env, "LexFlow pitch draft")),
+        draftSoftwarePitch(env, id, row, { product: "CounselAI" }).catch(notifyDraftFailure(env, "CounselAI pitch draft")),
       ]),
     );
     extra = " Drafting LexFlow and CounselAI pitches now — check your e-mail in about a minute.";
@@ -2599,7 +2595,7 @@ async function sendDigestEmail(env, items) {
     })
     .join("");
 
-  const res = await sendViaResend(env.RESEND_API_KEY, {
+  await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     subject: `${sorted.length} new matching item${sorted.length === 1 ? "" : "s"} (SAM.gov + awarded contracts)`,
@@ -2630,11 +2626,6 @@ async function sendDigestEmail(env, items) {
       })
       .join("\n\n"),
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error(`[aegis-samgov-bot] Digest e-mail failed ${res.status}:`, body);
-  }
 }
 
 async function sendReminderDigestEmail(env, items) {
@@ -2686,7 +2677,7 @@ async function sendReminderDigestEmail(env, items) {
     })
     .join("");
 
-  const res = await sendViaResend(env.RESEND_API_KEY, {
+  await sendViaResend(env.RESEND_API_KEY, {
     from,
     to: [to],
     subject: `Reminder: ${items.length} valuable lead${items.length === 1 ? "" : "s"} still waiting on your review`,
@@ -2702,11 +2693,6 @@ async function sendReminderDigestEmail(env, items) {
       )
       .join("\n\n"),
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    console.error(`[aegis-samgov-bot] Reminder e-mail failed ${res.status}:`, body);
-  }
 }
 
 async function notifyRobert(env, { subject, html }) {
@@ -2715,7 +2701,7 @@ async function notifyRobert(env, { subject, html }) {
   await sendViaResend(env.RESEND_API_KEY, { from, to: [to], subject, html }).catch(() => {});
 }
 
-function sendViaResend(apiKey, payload) {
+async function sendViaResend(apiKey, payload) {
   // Every caller passes an html field that's just a <div>...</div> fragment
   // with no declared charset. Wrapping it here (one place) instead of at
   // each of the ~10 call sites means every e-mail this bot sends -- digest,
@@ -2729,11 +2715,27 @@ function sendViaResend(apiKey, payload) {
       html: `<!doctype html><html><head><meta charset="utf-8"></head><body>${payload.html}</body></html>`,
     };
   }
-  return fetch(RESEND_API, {
+  const res = await fetch(RESEND_API, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  // Found via a real incident: a Resend failure on the digest send was only
+  // ever console.error'd (some callers didn't even do that -- checklist,
+  // outreach, and software-pitch drafts had NO failure handling at all), so
+  // a rejected send vanished completely -- 44 qualifying leads scored and
+  // inserted correctly, and nothing ever reached the inbox, with no crash
+  // and no error e-mail. Throwing here (one place, every caller) means a
+  // Resend failure now propagates like any other error -- callers under
+  // runPhase() get an automatic crash-notice e-mail, and callers that
+  // already have their own .catch() (e.g. notifyRobert, which must never
+  // throw or a failed crash-notice would itself go silently missing) keep
+  // their existing behavior.
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return res;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
